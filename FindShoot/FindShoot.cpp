@@ -191,7 +191,6 @@ int main()
 	pow(dx, 2, dx);
 	pow(dy, 2, dy);
 	grad = dx + dy;
-
 	double mn, mx;
 	minMaxLoc(grad, &mn, &mx);
 	grad -= mn;
