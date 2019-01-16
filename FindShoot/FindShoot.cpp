@@ -62,6 +62,70 @@ void MarkRect_callback(int  event, int  x, int  y, int  flag, void *param)
 	}
 }
 
+void MarkRectDrag_callback(int  event, int  x, int  y, int  flag, void *param)
+{
+	static bool isToDraw = false;
+	static int closePoint = -1;
+	ShootTargetMetaData* md = (ShootTargetMetaData*)param;
+	if (event == EVENT_LBUTTONDOWN)
+	{
+		md->DisplayTarget();
+		imshow(md->mWindowName, md->mDrawMat);
+		isToDraw = true;
+		cout << "(" << x << ", " << y << ")" << endl;
+	}
+	else if (event == EVENT_LBUTTONUP)
+	{
+		isToDraw = false;
+		closePoint = -1;
+	}
+	else if (event == EVENT_MOUSEMOVE && isToDraw)
+	{
+		cout << "(" << x << ", " << y << ")" << endl;
+		int dis[5];
+		int minDis = INT16_MAX;
+		
+		if (closePoint == -1)
+		{
+			int dx, dy;
+			for (int i = 0; i < 4; ++i)
+			{
+				dx = x - md->mPoints[i].x;
+				dy = y - md->mPoints[i].y;
+				dis[i] = dx * dx + dy * dy;
+				if (minDis > dis[i] && dis[i] < 10)
+				{
+					minDis = dis[i];
+					closePoint = i;
+				}
+			}
+			dx = x - md->mCenter.x;
+			dy = y - md->mCenter.y;
+			dis[4] = dx * dx + dy * dy;
+			if (minDis > dis[4] && dis[4] < 10)
+			{
+				minDis = dis[4];
+				closePoint = 4;
+			}
+		}
+		else if (closePoint > -1)
+		{
+			if (closePoint < 4)
+			{
+				md->mPoints[closePoint].x = x;
+				md->mPoints[closePoint].y = y;
+			}
+			else
+			{
+				md->mCenter.x = x;
+				md->mCenter.y = y;
+			}
+			md->DisplayTarget();
+			imshow(md->mWindowName, md->mDrawMat);
+		}
+	}
+}
+
 void mouse_callback(int  event, int  x, int  y, int  flag, void *param)
 {
 	if (event == EVENT_LBUTTONDOWN) 
@@ -138,11 +202,11 @@ int main()
 
 		metaData.mOrgMat = smallFrame;
 		metaData.mWindowName = "EnterPositions";
-		metaData.mRectColor = Scalar(255, 0, 0);
+		metaData.mRectColor = Scalar(25, 255, 0);
 		metaData.mCenterColor = Scalar(0, 0, 255);
 
-		imshow("EnterPositions", smallFrame);
-		setMouseCallback("EnterPositions", MarkRect_callback, &metaData);
+		imshow("EnterPositions", metaData.mOrgMat);
+		setMouseCallback("EnterPositions", MarkRectDrag_callback, &metaData);
 		int k = waitKey();
 		metaData.ToFile(mdFileName);
 	}
