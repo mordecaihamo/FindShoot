@@ -12,7 +12,7 @@ void Erosion(Mat &src, Mat &dst, int erosion_size);
 /** @function Dilation */
 void Dilation(Mat &src, Mat &dst, int dilation_size, int dilationType = 0);
 
-void FindMovment(Mat& a, Mat& b, int& x, int& y, Rect& rct, int lookDis, bool isToDisplay = false);
+void FindMovment(Mat& a, Mat& b, int& x, int& y, Rect& rct, int lookDis, bool isToZero = false, bool isToDisplay = false);
 
 Rect FindInboundRect(Rect rct, const Point* rectPoints);
 

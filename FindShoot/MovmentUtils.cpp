@@ -45,7 +45,7 @@ void Dilation(Mat &src, Mat &dst, int dilation_size, int dilationType)
 	dilate(src, dst, element);
 }
 
-void FindMovment(Mat& a, Mat& b, int& x, int& y, Rect& rct, int lookDis, bool isToDisplay)
+void FindMovment(Mat& a, Mat& b, int& x, int& y, Rect& rct, int lookDis,bool isToZero, bool isToDisplay)
 {
 	int H = a.size().height;
 	int W = a.size().width;
@@ -88,6 +88,17 @@ void FindMovment(Mat& a, Mat& b, int& x, int& y, Rect& rct, int lookDis, bool is
 				cMn = c;
 			}
 		}
+	}
+	if (isToZero)
+	{
+		rctMov.x = cMn;
+		rctMov.y = rMn;
+		Mat br = b(rctMov);
+		imshow("ar", ar);
+		ar.setTo(0, br);
+		imshow("br", br);
+		imshow("arAfter", ar);
+		waitKey();
 	}
 	x = cMn - rct.x;
 	y = rMn - rct.y;

@@ -58,7 +58,7 @@ void MarkRect_callback(int  event, int  x, int  y, int  flag, void *param)
 			md->mCenter.y = y;
 		}
 		md->DisplayTarget();
-		imshow(md->mWindowName, md->mDrawMat);
+		cv::imshow(md->mWindowName, md->mDrawMat);
 	}
 }
 
@@ -70,7 +70,7 @@ void MarkRectDrag_callback(int  event, int  x, int  y, int  flag, void *param)
 	if (event == EVENT_LBUTTONDOWN)
 	{
 		md->DisplayTarget();
-		imshow(md->mWindowName, md->mDrawMat);
+		cv::imshow(md->mWindowName, md->mDrawMat);
 		isToDraw = true;
 		cout << "(" << x << ", " << y << ")" << endl;
 	}
@@ -121,7 +121,7 @@ void MarkRectDrag_callback(int  event, int  x, int  y, int  flag, void *param)
 				md->mCenter.y = y;
 			}
 			md->DisplayTarget();
-			imshow(md->mWindowName, md->mDrawMat);
+			cv::imshow(md->mWindowName, md->mDrawMat);
 		}
 	}
 }
@@ -130,12 +130,28 @@ void mouse_callback(int  event, int  x, int  y, int  flag, void *param)
 {
 	if (event == EVENT_LBUTTONDOWN) 
 	{
-		cout << "(" << x << ", " << y << ")" << endl;
+		cout << "(" << x << ", " << y << ")";
+		if (param)
+		{
+			Mat* m = (Mat*)param;
+			int chNum = m->channels();
+			if (chNum == 3)
+			{
+				Vec3b bgrPixel = ((Mat*)param)->at<Vec3b>(y, x);
+				cout << ": (" << bgrPixel[0] << "," << bgrPixel[1] << "," << bgrPixel[2] << ")" << endl;
+			}
+			else if (chNum == 1)
+			{
+				uchar pixel = ((Mat*)param)->at<uchar>(y, x);
+				cout << ": " << (int)pixel << endl;
+			}
+		}
 	}
 }
 
 int main()
 {
+	using namespace cv;
 	bool toDisplay = false;
 	String dirName = "C:/moti/FindShoot/";
 	String fName = "MVI_3";
@@ -204,10 +220,10 @@ int main()
 		metaData.mWindowName = "EnterPositions";
 		metaData.mRectColor = Scalar(25, 255, 0);
 		metaData.mCenterColor = Scalar(0, 0, 255);
-
+		
 		imshow("EnterPositions", metaData.mOrgMat);
-		setMouseCallback("EnterPositions", MarkRectDrag_callback, &metaData);
-		int k = waitKey();
+		cv::setMouseCallback("EnterPositions", MarkRectDrag_callback, &metaData);
+		int k = cv::waitKey();
 		metaData.ToFile(mdFileName);
 	}
 	else
@@ -220,55 +236,62 @@ int main()
 		}
 		cout << "Center: (" << metaData.mCenter.x << "," << metaData.mCenter.y << ")"<<endl;
 	}
-	
+
+	Mat map(sz.height, sz.width, CV_8UC1);
+	map.setTo(255);
+	drawPolyRect(map, metaData.mPoints, Scalar(0), -1);
+
+	Mat bgr[3];
+	split(smallFrame, bgr);
+	int selectedCh = 0;
+	int maxDiff = 0;
+	double mn, mx;
+
 	cvtColor(smallFrame, firstFrame, COLOR_BGR2GRAY);
 	drawPolyRect(smallFrame, metaData.mPoints, Scalar(255, 0, 17), 1);
-	imshow("TargetOnFrame", smallFrame);
-	setMouseCallback("TargetOnFrame", mouse_callback);
-	equalizeHist(firstFrame, firstFrame);
+	cv::imshow("TargetOnFrame", smallFrame);
+	cv::setMouseCallback("TargetOnFrame", mouse_callback);
+	cv::equalizeHist(firstFrame, firstFrame);
 	firstFrame.copyTo(smallFrame);
 	
-	Mat frameDiffF(sz.height, sz.width, CV_64FC1);
-
 	Rect rctMargin;
 	int look = 15;
 	rctMargin.x = look;
 	rctMargin.y = look;
 	rctMargin.width = sz.width - 2 * look;
 	rctMargin.height = sz.height - 2 * look;
-	Mat smallFrameMar(smallFrame, rctMargin);
-	Mat frameDiffFMar(frameDiffF, rctMargin);
 	Mat firstFrameMar(firstFrame, rctMargin);
 	Mat target(sz.height, sz.width, CV_8UC1);
-	Mat map(sz.height, sz.width, CV_8UC1);
+	
 	Rect rectInBound = FindInboundRect(rctMargin, metaData.mPoints);
 	
 	drawPolyRect(target, metaData.mPoints, Scalar(0), -1);
-	map.setTo(255);
-	drawPolyRect(map, metaData.mPoints, Scalar(0), -1);
 	//Find the edges inside the map
 	Mat dx, dy, grad, grad8;
-	Sobel(smallFrame, dx, CV_16S, 1, 0);
+	cv::Sobel(smallFrame, dx, CV_16S, 1, 0);
 	dx.setTo(0, map);
-	Sobel(smallFrame, dy, CV_16S, 0, 1);
+	cv::Sobel(smallFrame, dy, CV_16S, 0, 1);
 	dy.setTo(0, map);
-	pow(dx, 2, dx);
-	pow(dy, 2, dy);
+	cv::pow(dx, 2, dx);
+	cv::pow(dy, 2, dy);
 	grad = dx + dy;
-	double mn, mx;
+	
+	int gradThr = 100;
 	minMaxLoc(grad, &mn, &mx);
 	grad -= mn;
 	if (mx > 0)
 	{
 		grad.convertTo(grad8, CV_8UC1, 255 / mx);
-		threshold(grad8, grad8, 200, 255,THRESH_BINARY);
+		cv::threshold(grad8, grad8, gradThr, 255,THRESH_BINARY);
 	}
 	else
 		grad8.setTo(0);
 
+	Mat firstGrad;
+	grad8.copyTo(firstGrad);
 
 	//Dilation(target, target, 1);
-	imshow("grad", grad8);
+	cv::imshow("grad", grad8);
 	//map.setTo(255);
 	//rectangle(map, targetRect, 0, -1);
 	Mat mapNot;
@@ -279,27 +302,83 @@ int main()
 	smallFrame.copyTo(firstFrame);
 	int fltrSz = 3;
 	//blur(firstFrame, firstFrame,Size(fltrSz, fltrSz));
-	imshow("firstFrame", firstFrame);
+	cv::imshow("firstFrame", firstFrame);
 	minMaxIdx(firstFrame, &ffMin, &ffMax,&ffMinIdx,&ffMaxIdx,mapNot);
 	int bg = cvFloor((ffMin+ffMax)*0.5);
-	//accu.setTo(0);
-	frameDiffF.setTo(0);
-	threshold(target, target, 1, 255, THRESH_BINARY);
-	bitwise_or(map, grad8, map);
+	cv::threshold(target, target, 1, 255, THRESH_BINARY);
+	
 	Mat shiftMap = map(Rect(1, 1, sz.width - 1, sz.height - 1));
 	Mat shiftGrad = grad8(Rect(0, 0, sz.width - 1, sz.height - 1));
-	bitwise_or(shiftMap, shiftGrad, map);
+
 	rectangle(target, rectInBound, Scalar(100));
-	imshow("mapZ", map);
-	imshow("mapZ1", target);
-	waitKey();
+	cv::imshow("mapZ", map);
+	cv::imshow("mapZ1", target);
+	cv::waitKey();
 	srand(1);
 	Mat shot = map.clone();
 	Mat mapMar(map, rctMargin);
 	Mat targetMar(target, rctMargin);
-	//Mat matDrawOn = map.clone();
+	int thrOfGrad = 100;
+	cv::threshold(firstGrad, firstGrad, thrOfGrad, 255, THRESH_BINARY);
+	//Map all the contours of the first frame
+	vector<vector<Point> > contoursFirst;
+	vector<Vec4i> hierarchyFirst;
+	cv::findContours(firstGrad, contoursFirst, RETR_LIST, CHAIN_APPROX_NONE);
+	//Leave only large contours
+	int numOfFirstContours = (int)contoursFirst.size();
+	int idxMaxFirst = -1;
+	int rectAreaMaxFirst = 0;
+	Point2f pntCgMaxFirst(0, 0);
+
+	if (numOfFirstContours > 0)
+	{
+		int idx = 0;
+		double arMax = 0;
+		for (; idx < contoursFirst.size(); idx++)
+		{
+			double ar = contourArea(contoursFirst[idx]);
+			Rect shRct = boundingRect(contoursFirst[idx]);
+			if (shRct.width == 0 || shRct.height == 0)
+				continue;
+			float ratioWh = min(shRct.width, shRct.height) / (float)max(shRct.width, shRct.height);
+			int cntNonZ = (int)contoursFirst[idx].size();// countNonZero(onlyCntr);
+			float ratioAr = cntNonZ / (float)(shRct.width*shRct.height);
+			float ratioFromAll = cntNonZ / (float)(sz.width*sz.height);
+			char buf[256] = { '\0' };
+			sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
+				cntFrameNum, idx, numOfFirstContours, ar, shRct.width, shRct.height, ratioWh, shRct.x + (shRct.width >> 1), shRct.y + (shRct.height >> 1), cntNonZ, ratioFromAll);
+			OutputDebugStringA(buf);
+			if (cntNonZ > rectAreaMaxFirst)
+			{
+				rectAreaMaxFirst = cntNonZ;
+				idxMaxFirst = idx;
+				pntCgMaxFirst.x = shRct.x + shRct.width*0.5f;
+				pntCgMaxFirst.y = shRct.y + shRct.height*0.5f;
+			}
+			//if (cntFrameNum == 160)
+			//{
+			//	shot.setTo(0);
+			//	drawContours(shot, contoursFirst, idx, 255, 0, 8, hierarchyFirst);
+			//	cv::setMouseCallback("shot", mouse_callback, &metaData);
+			//	cv::imshow("cntr", shot);
+			//	cv::waitKey();
+			//}
+
+			if (ratioFromAll < 0.0001)//too small delete it
+			{
+				contoursFirst.erase(contoursFirst.begin() + idx);
+				--idx;
+			}
+		}
+	}
+	int numOfInitCntr = (int)contoursFirst.size();
+
+	Mat grad8Thr;
+	Mat firstGradMar, grag8ThrMar;
+	firstGradMar = firstGrad(rctMargin);
 	Mat frameRgb;
 	Mat frameRgbDisplayed;
+	
 	shot.setTo(0);
 	vector<Rect> foundShotRects;
 	vector<Scalar> colors;
@@ -336,59 +415,50 @@ int main()
 		if (smallFrame.empty())
 			break;
 		//smallFrame.setTo(bg, map);
-		equalizeHist(smallFrame, smallFrame);
+		cv::equalizeHist(smallFrame, smallFrame);
+
+		cv::Sobel(smallFrame, dx, CV_16S, 1, 0);
+		dx.setTo(0, map);
+		cv::Sobel(smallFrame, dy, CV_16S, 0, 1);
+		dy.setTo(0, map);
+		cv::pow(dx, 2, dx);
+		cv::pow(dy, 2, dy);
+		grad = dx + dy;
+		//double mn, mx;
+		//minMaxLoc(grad, &mn, &mx);
+		grad -= mn;
+		if (mx > 0)
+		{
+			grad.convertTo(grad8, CV_8UC1, 255 / mx);
+			cv::threshold(grad8, grad8Thr, thrOfGrad, 255, THRESH_BINARY);
+		}
+		else
+			grad8.setTo(0);
+
 		int x = 0, y = 0;
 		bool isToDisplay = false;
 		//if (cntFrameNum == 738)	isToDisplay = true;
 		//cout << cntFrameNum<<" Movment search" << endl;
-		FindMovment(firstFrame, smallFrame, x, y, rectInBound, look, isToDisplay);
-		//if (abs(x) > 8 || abs(y) > 8)
-		//	continue;
+		//FindMovment(grad8Thr, firstGrad, x, y, rectInBound, look, false, isToDisplay);
 		Rect movRct(rctMargin);
 		movRct.x += x;
 		movRct.y += y;
-		smallFrameMar = smallFrame(movRct);
-		//blur(smallFrame, smallFrame, Size(fltrSz, fltrSz));
-		if (0&&!prevFrame.empty())
-		{
-#pragma warning(disable : 4996)
-			Transform = estimateRigidTransform(smallFrame, firstFrame, 1);
-			Transform(Range(0, 2), Range(0, 2)) = Mat::eye(2, 2, CV_64FC1);
-			Transform_avg += (Transform - Transform_avg) / 2.0;
-			warpAffine(smallFrame, warped, Transform_avg, Size(smallFrame.cols, smallFrame.rows));
-			warped.copyTo(smallFrame);
-			//imshow("Camw", warped);
-		}
 
-		frameDiff = abs(firstFrameMar - smallFrameMar);
-		//Mat frameDiffShotInShot = frameDiff.clone();
-		imshow("diffBefore", frameDiff);
-		//imshow("mapMarBefore", mapMar);
-#undef max
-
-		frameDiff.setTo(0, mapMar);
-		//imshow("diffAfterMap", frameDiff);
-		//frameDiff = max(frameDiff, 30);
-		//imshow("diffAfterMax", frameDiff);
-		//frameDiff = frameDiff - 100;
-		//equalizeHist(frameDiff, frameDiff);
-
-		//Erosion(frameDiff, shot, 1);
-		threshold(frameDiff, shot, 35, 255, THRESH_BINARY);
-		//Dilation(shot, shot, 1);
 		vector<vector<Point> > contours;
 		vector<Vec4i> hierarchy;
-		findContours(shot, contours, RETR_LIST, CHAIN_APPROX_NONE);
+		cv::findContours(grad8Thr, contours, RETR_LIST, CHAIN_APPROX_NONE);
 		int cntrSz = (int)contours.size();
 		char buf[256] = { '\0' };
-		sprintf(buf, "FindShot: F=%d move x=%d y=%d. Found cntr=%d\n", cntFrameNum,x,y,cntrSz);
+		sprintf_s(buf, "FindShot: F=%d move x=%d y=%d. Found cntr=%d\n", cntFrameNum,x,y,cntrSz);
 		OutputDebugStringA(buf);
-
-		if (cntrSz > 0	&& cntrSz < 170)
+/*********/
+		int numOfContours = (int)contours.size();
+		int idxMax = -1;
+		int rectAreaMax = 0;
+		Point2f pntCgMax(0, 0);
+		if (numOfContours > 0)
 		{
 			int idx = 0;
-			int idxMax = -1;
-			int rectAreaMax = 0;
 			double arMax = 0;
 			for (; idx < contours.size(); idx++)
 			{
@@ -397,106 +467,65 @@ int main()
 				if (shRct.width == 0 || shRct.height == 0)
 					continue;
 				float ratioWh = min(shRct.width, shRct.height) / (float)max(shRct.width, shRct.height);
+				int cntNonZ = (int)contours[idx].size();// countNonZero(onlyCntr);
+				float ratioAr = cntNonZ / (float)(shRct.width*shRct.height);
+				float ratioFromAll = cntNonZ / (float)(sz.width*sz.height);
 				char buf[256] = { '\0' };
-				sprintf(buf, "FindShot: F=%d, Cntr=%d:%d, Shots#=%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d)\n", 
-					cntFrameNum, idx, cntrSz, (int)foundShotRects.size(), ar, shRct.width, shRct.height, ratioWh, shRct.x+ (shRct.width>>1), shRct.y+ (shRct.height>>1));
+				sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
+					cntFrameNum, idx, numOfContours, ar, shRct.width, shRct.height, ratioWh, shRct.x + (shRct.width >> 1), shRct.y + (shRct.height >> 1), cntNonZ, ratioFromAll);
 				OutputDebugStringA(buf);
-				//if (cntFrameNum == 160)
-				//{
-				//	shot.setTo(0);
-				//	drawContours(shot, contours, idx, 255, FILLED, 8, hierarchy);
-				//	imshow("shot", shot);
-				//	imshow("FrameD", frameDiff);
-				//	imshow("Frame", smallFrame);
-				//	imshow("PrevFrame", prevFrame);
-				//	setMouseCallback("Frame", mouse_callback, &metaData);
-				//	waitKey();
-				//}
+				if (cntNonZ > rectAreaMax)
+				{
+					rectAreaMax = cntNonZ;
+					idxMax = idx;
+					pntCgMax.x = shRct.x + shRct.width*0.5f;
+					pntCgMax.y = shRct.y + shRct.height*0.5f;
+				}
+				if(cntNonZ < 10 || (shRct.width>25 && shRct.height>25))//too small delete it
+				{
+					contours.erase(contours.begin() + idx);
+					--idx;
+					numOfContours--;
+				}
+			}
+			/*This is the movment between the frames*/
+			x = pntCgMax.x - pntCgMaxFirst.x;
+			y = pntCgMax.y - pntCgMaxFirst.y;
 
-				if ((ar>arMax)&&
-					(ar > 10 && shRct.width<20 && shRct.height<20 && shRct.width > 2 && shRct.height > 2 && ratioWh>0.54)||
-					(ar > 25 && shRct.width < 20 && shRct.height < 20 && shRct.width > 4 && shRct.height > 4 && ratioWh > 0.45)||
+			for (idx=0; idx < contours.size(); idx++)
+			{
+				double ar = contourArea(contours[idx]);
+				Rect shRct = boundingRect(contours[idx]);
+				if (shRct.width == 0 || shRct.height == 0)
+					continue;
+				float ratioWh = min(shRct.width, shRct.height) / (float)max(shRct.width, shRct.height);
+				int cntNonZ = (int)contours[idx].size();// countNonZero(onlyCntr);
+				float ratioAr = cntNonZ / (float)(shRct.width*shRct.height);
+				float ratioFromAll = cntNonZ / (float)(sz.width*sz.height);
+				char buf[256] = { '\0' };
+				sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
+					cntFrameNum, idx, numOfContours, ar, shRct.width, shRct.height, ratioWh, shRct.x + (shRct.width >> 1), shRct.y + (shRct.height >> 1), cntNonZ, ratioFromAll);
+				OutputDebugStringA(buf);
+
+				if ((ar > arMax) &&
+					(ar > 10 && shRct.width < 20 && shRct.height < 20 && shRct.width > 2 && shRct.height > 2 && ratioWh > 0.54) ||
+					(ar > 25 && shRct.width < 20 && shRct.height < 20 && shRct.width > 4 && shRct.height > 4 && ratioWh > 0.45) ||
 					(ar >= 3 && shRct.width < 20 && shRct.height < 20 && shRct.width > 4 && shRct.height >= 4 && ratioWh > 0.79))
 				{
-					Mat onlyCntr = shot(shRct);
-					int cntNonZ = countNonZero(onlyCntr);
-					float ratioAr = cntNonZ / (float)(shRct.width*shRct.height);
-					char buf[256] = { '\0' };
-					sprintf(buf, "FindShot cand: %f\n", ratioAr);
-					OutputDebugStringA(buf);
-					if (ratioAr > 0.5)
+					/*Need to go over the first contours compare its cg and MatchShape and see if this one is new, if yes add it to the list*/
 					{
-						arMax = ar;
-						rectAreaMax = shRct.width*shRct.height;
-						idxMax = idx;
+						shot.setTo(0);
+						drawContours(shot, contours, idx, 255, 0, 8, hierarchy);
+						cv::setMouseCallback("shot", mouse_callback, &metaData);
+						cv::imshow("cntr", shot);
+						cv::waitKey();
 					}
 				}
 			}
-			if (idxMax > -1)
-			{
-				isToBreak = true;
-				//cout << cntFrameNum << " Found good cand" << endl;
-				Rect shRct = boundingRect(contours[idxMax]);
-				shRct.x += look;
-				shRct.y += look;
-				foundShotRects.push_back(shRct);
-				//Update all rects to the replace of the first frame.
-				for (int rc = 0; rc < (int)foundShotRects.size(); ++rc)
-				{
-					foundShotRects[rc].x += x;
-					foundShotRects[rc].y += y;
-				}
-				//found shot
-				//drawContours(map, contours, idx, 255, FILLED, 8, hierarchy);
-				shot.setTo(0);
-				drawContours(shot, contours, idxMax, 255, FILLED, 8, hierarchy);
-				Dilation(shot, shot, 2);
-				bitwise_or(shot, mapMar, mapMar);
-				//rectangle(mapMar, shRct, Scalar(255), -1);
-				smallFrame.copyTo(firstFrame);
-				//Move the grad map according to all of the movments
-				sumX += x+1;
-				sumY += y+1;
-				if (sumX >= look)
-					sumX = look-1;
-				if (sumX <= -look)
-					sumX = -(look-1);
-				if (sumY >= look)
-					sumY = look-1;
-				if (sumY <= -look)
-					sumY = -(look-1);
 
-				Rect rctTemp(rctMargin);
-				int xMovGrad = x, yMovGrad = y;
-				bool isMoveDisplay = false;
-				//if (cntFrameNum == 373)					isMoveDisplay = true;
-//				if (abs(x) > 1 && abs(y) > 1)
-				{
-					int lookGradMove = 5;// max(abs(x + 1), abs(y + 1));
-					FindMovment(map, grad8, xMovGrad, yMovGrad, rectInBound, lookGradMove, isMoveDisplay);
-				}
-				rctTemp.x += xMovGrad;
-				rctTemp.y += yMovGrad;
-				//imshow("mapMar1", mapMar);
-				mapMar = map(rctTemp);
-				//imshow("mapMar2", mapMar);
-				imshow("shot", shot);
-				colors.push_back(Scalar(rand() % 256, rand() % 256, rand() % 256));
-				char buf[256] = { '\0' };
-				sprintf(buf, "FindShot: ***F=%d, cntr=%d, Shots#=%d, sx=%d, sy=%d\n", cntFrameNum,idxMax, (int)foundShotRects.size(),sumX,sumY);
-				OutputDebugStringA(buf);
-				
-				x = 0;
-				y = 0;
-			}
 		}
 
-		//frameDiff.convertTo(frameDiffF, CV_64FC1, 255.0 / NUM_OF_FRAMES_IN_ACC);
-		//accu = accu + frameDiffF;
-		//minMaxIdx(accu, &ffMin, &ffMax, &ffMinIdx, &ffMaxIdx, mapNot);
-		//accu.convertTo(frameDiff, CV_8UC1, 255 / ffMax);
-		// Display the resulting frame
-		//rectangle(frameDiff, targetRect, 128, 2);
+/********/
 		int numOfShotsFound = (int)foundShotRects.size();
 		for (int rc = 0; rc < numOfShotsFound-1; ++rc)
 		{
@@ -509,29 +538,31 @@ int main()
 		if(numOfShotsFound>0)
 			rectangle(frameRgb, foundShotRects[numOfShotsFound - 1], Scalar(255, 0, 0), 2);
 		frameRgb.copyTo(frameRgbDisplayed);
-		imshow("SHOTS", frameRgb);
-		imshow("firstFrame", firstFrame);
-		imshow("mapMar", mapMar);
-		imshow( "FrameD", frameDiff);
-		setMouseCallback("FrameD", mouse_callback);
-		imshow("Frame", smallFrame);
-		imshow("PrevFrame", prevFrame);
+		cv::imshow("SHOTS", frameRgb);
+		cv::imshow("firstFrame", firstFrame);
+		cv::imshow("mapMar", mapMar);
+		cv::imshow("Frame", smallFrame);
+		cv::imshow("PrevFrame", prevFrame);
+		cv::imshow("grad", grad8);
+		cv::setMouseCallback("grad", mouse_callback,(void*)&grad8);
+		cv::imshow("gradThr", grad8Thr);
+		cv::imshow("gradFirst", firstGrad);
  
 		// Press  ESC on keyboard to exit
-		if (0)//cntFrameNum > 680)//isToBreak)//
+		if (1)//cntFrameNum > 680)//isToBreak)//
 		{
 			isToBreak = false;
-			char c = (char)waitKey();
+			char c = (char)cv::waitKey();
 			if (c == 27)
 				break;
 		}
 		else
-			waitKey(5);
+			waitKey(25);
 	}
-	destroyAllWindows();
-	imshow("SHOTS", frameRgbDisplayed);
-	waitKey();
-	destroyAllWindows();
+	//destroyAllWindows();
+	cv::imshow("SHOTS", frameRgbDisplayed);
+	cv::waitKey();
+	cv::destroyAllWindows();
   // When everything done, release the video capture object
 	cap.release();
     return 0;
