@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include "ShootTargetMetaData.h"
 #include "MovmentUtils.h"
+#include "ContourData.h"
 
 using namespace std;
 using namespace cv;
@@ -329,6 +330,7 @@ int main()
 	int idxMaxFirst = -1;
 	int rectAreaMaxFirst = 0;
 	Point2f pntCgMaxFirst(0, 0);
+	vector<ContourData> cntrDataFirst;
 
 	if (numOfFirstContours > 0)
 	{
@@ -336,14 +338,16 @@ int main()
 		double arMax = 0;
 		for (; idx < contoursFirst.size(); idx++)
 		{
-			double ar = contourArea(contoursFirst[idx]);
-			Rect shRct = boundingRect(contoursFirst[idx]);
-			if (shRct.width == 0 || shRct.height == 0)
+			ContourData cd;
+			cd.mAr = contourArea(contoursFirst[idx]);
+			cd.mShRct = boundingRect(contoursFirst[idx]);
+			if (cd.mShRct.width == 0 || cd.mShRct.height == 0)
 				continue;
-			float ratioWh = min(shRct.width, shRct.height) / (float)max(shRct.width, shRct.height);
-			int cntNonZ = (int)contoursFirst[idx].size();// countNonZero(onlyCntr);
-			float ratioAr = cntNonZ / (float)(shRct.width*shRct.height);
-			float ratioFromAll = cntNonZ / (float)(sz.width*sz.height);
+			cd.mRatioWh = min(cd.mShRct.width, cd.mShRct.height) / (float)max(cd.mShRct.width, cd.mShRct.height);
+			cd.mCntNonZ = (int)contoursFirst[idx].size();
+			cd.mRatioAr = cd.mCntNonZ / (float)(cd.mShRct.width*cd.mShRct.height);
+			cd.mRatioFromAll = cd.mCntNonZ / (float)(sz.width*sz.height);
+			cd.mCg = Point2f(cd.mShRct.x + cd.mShRct.width*0.5f, cd.mShRct.y + cd.mShRct.height*0.5f);
 			char buf[256] = { '\0' };
 			sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
 				cntFrameNum, idx, numOfFirstContours, ar, shRct.width, shRct.height, ratioWh, shRct.x + (shRct.width >> 1), shRct.y + (shRct.height >> 1), cntNonZ, ratioFromAll);
@@ -368,6 +372,10 @@ int main()
 			{
 				contoursFirst.erase(contoursFirst.begin() + idx);
 				--idx;
+			}
+			else
+			{
+				cntrDataFirst.push_back(cd);
 			}
 		}
 	}
@@ -488,6 +496,15 @@ int main()
 					numOfContours--;
 				}
 			}
+			/*If a n out of focus frame than the contours will break, skip these frames*/
+			if (rectAreaMax / (float)rectAreaMaxFirst < 0.65)
+			{
+				cout << rectAreaMax / (float)rectAreaMaxFirst << endl;
+				cv::imshow("gradThr", grad8Thr);
+				cv::imshow("skipping", frameRgb);
+				cv::waitKey();
+				continue;
+			}
 			/*This is the movment between the frames*/
 			x = pntCgMax.x - pntCgMaxFirst.x;
 			y = pntCgMax.y - pntCgMaxFirst.y;
@@ -514,6 +531,24 @@ int main()
 				{
 					/*Need to go over the first contours compare its cg and MatchShape and see if this one is new, if yes add it to the list*/
 					{
+/*************************/
+						int idxFirst = 0;
+						for (; idxFirst < contoursFirst.size(); idxFirst++)
+						{
+							double arFirst = contourArea(contoursFirst[idxFirst]);
+							Rect shRctFirst = boundingRect(contoursFirst[idxFirst]);
+							if (shRctFirst.width == 0 || shRctFirst.height == 0)
+								continue;
+							float ratioWhFirst = min(shRctFirst.width, shRctFirst.height) / (float)max(shRctFirst.width, shRctFirst.height);
+							int cntNonZFirst = (int)contoursFirst[idxFirst].size();// countNonZero(onlyCntr);
+							float ratioArFirst = cntNonZFirst / (float)(shRctFirst.width*shRctFirst.height);
+							float ratioFromAll = cntNonZ / (float)(sz.width*sz.height);
+							char buf[256] = { '\0' };
+							sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
+								cntFrameNum, idx, numOfFirstContours, ar, shRct.width, shRct.height, ratioWh, shRct.x + (shRct.width >> 1), shRct.y + (shRct.height >> 1), cntNonZ, ratioFromAll);
+							OutputDebugStringA(buf);
+						}
+/*************************/
 						shot.setTo(0);
 						drawContours(shot, contours, idx, 255, 0, 8, hierarchy);
 						cv::setMouseCallback("shot", mouse_callback, &metaData);
@@ -549,7 +584,7 @@ int main()
 		cv::imshow("gradFirst", firstGrad);
  
 		// Press  ESC on keyboard to exit
-		if (1)//cntFrameNum > 680)//isToBreak)//
+		if (0)//cntFrameNum > 680)//isToBreak)//
 		{
 			isToBreak = false;
 			char c = (char)cv::waitKey();
