@@ -338,26 +338,18 @@ int main()
 		double arMax = 0;
 		for (; idx < contoursFirst.size(); idx++)
 		{
-			ContourData cd;
-			cd.mAr = contourArea(contoursFirst[idx]);
-			cd.mShRct = boundingRect(contoursFirst[idx]);
+			ContourData cd(contoursFirst[idx], sz);
 			if (cd.mShRct.width == 0 || cd.mShRct.height == 0)
 				continue;
-			cd.mRatioWh = min(cd.mShRct.width, cd.mShRct.height) / (float)max(cd.mShRct.width, cd.mShRct.height);
-			cd.mCntNonZ = (int)contoursFirst[idx].size();
-			cd.mRatioAr = cd.mCntNonZ / (float)(cd.mShRct.width*cd.mShRct.height);
-			cd.mRatioFromAll = cd.mCntNonZ / (float)(sz.width*sz.height);
-			cd.mCg = Point2f(cd.mShRct.x + cd.mShRct.width*0.5f, cd.mShRct.y + cd.mShRct.height*0.5f);
 			char buf[256] = { '\0' };
 			sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
-				cntFrameNum, idx, numOfFirstContours, ar, shRct.width, shRct.height, ratioWh, shRct.x + (shRct.width >> 1), shRct.y + (shRct.height >> 1), cntNonZ, ratioFromAll);
+				cntFrameNum, idx, numOfFirstContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mShRct.x + (cd.mShRct.width >> 1), cd.mShRct.y + (cd.mShRct.height >> 1), cd.mCntNonZ, cd.mRatioFromAll);
 			OutputDebugStringA(buf);
-			if (cntNonZ > rectAreaMaxFirst)
+			if (cd.mCntNonZ > rectAreaMaxFirst)
 			{
-				rectAreaMaxFirst = cntNonZ;
+				rectAreaMaxFirst = cd.mCntNonZ;
 				idxMaxFirst = idx;
-				pntCgMaxFirst.x = shRct.x + shRct.width*0.5f;
-				pntCgMaxFirst.y = shRct.y + shRct.height*0.5f;
+				pntCgMaxFirst = cd.mCg;
 			}
 			//if (cntFrameNum == 160)
 			//{
@@ -368,7 +360,7 @@ int main()
 			//	cv::waitKey();
 			//}
 
-			if (ratioFromAll < 0.0001)//too small delete it
+			if (cd.mRatioFromAll < 0.0001)//too small delete it
 			{
 				contoursFirst.erase(contoursFirst.begin() + idx);
 				--idx;
@@ -511,49 +503,42 @@ int main()
 
 			for (idx=0; idx < contours.size(); idx++)
 			{
-				double ar = contourArea(contours[idx]);
-				Rect shRct = boundingRect(contours[idx]);
-				if (shRct.width == 0 || shRct.height == 0)
+				ContourData cd(contours[idx],sz);
+				if (cd.mShRct.width == 0 || cd.mShRct.height == 0)
 					continue;
-				float ratioWh = min(shRct.width, shRct.height) / (float)max(shRct.width, shRct.height);
-				int cntNonZ = (int)contours[idx].size();// countNonZero(onlyCntr);
-				float ratioAr = cntNonZ / (float)(shRct.width*shRct.height);
-				float ratioFromAll = cntNonZ / (float)(sz.width*sz.height);
+
 				char buf[256] = { '\0' };
 				sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
-					cntFrameNum, idx, numOfContours, ar, shRct.width, shRct.height, ratioWh, shRct.x + (shRct.width >> 1), shRct.y + (shRct.height >> 1), cntNonZ, ratioFromAll);
+					cntFrameNum, idx, numOfContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mCg.x, cd.mCg.y, cd.mCntNonZ, cd.mRatioFromAll);
 				OutputDebugStringA(buf);
 
-				if ((ar > arMax) &&
-					(ar > 10 && shRct.width < 20 && shRct.height < 20 && shRct.width > 2 && shRct.height > 2 && ratioWh > 0.54) ||
-					(ar > 25 && shRct.width < 20 && shRct.height < 20 && shRct.width > 4 && shRct.height > 4 && ratioWh > 0.45) ||
-					(ar >= 3 && shRct.width < 20 && shRct.height < 20 && shRct.width > 4 && shRct.height >= 4 && ratioWh > 0.79))
+				if ((cd.mAr > arMax) &&
+					(cd.mAr > 10 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 2 && cd.mShRct.height > 2 && cd.mRatioWh > 0.54) ||
+					(cd.mAr > 25 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 4 && cd.mShRct.height > 4 && cd.mRatioWh > 0.45) ||
+					(cd.mAr >= 3 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 4 && cd.mShRct.height >= 4 && cd.mRatioWh > 0.79))
 				{
 					/*Need to go over the first contours compare its cg and MatchShape and see if this one is new, if yes add it to the list*/
 					{
 /*************************/
 						int idxFirst = 0;
-						for (; idxFirst < contoursFirst.size(); idxFirst++)
+						for (; idxFirst < cntrDataFirst.size(); idxFirst++)
 						{
-							double arFirst = contourArea(contoursFirst[idxFirst]);
-							Rect shRctFirst = boundingRect(contoursFirst[idxFirst]);
-							if (shRctFirst.width == 0 || shRctFirst.height == 0)
-								continue;
-							float ratioWhFirst = min(shRctFirst.width, shRctFirst.height) / (float)max(shRctFirst.width, shRctFirst.height);
-							int cntNonZFirst = (int)contoursFirst[idxFirst].size();// countNonZero(onlyCntr);
-							float ratioArFirst = cntNonZFirst / (float)(shRctFirst.width*shRctFirst.height);
-							float ratioFromAll = cntNonZ / (float)(sz.width*sz.height);
-							char buf[256] = { '\0' };
-							sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
-								cntFrameNum, idx, numOfFirstContours, ar, shRct.width, shRct.height, ratioWh, shRct.x + (shRct.width >> 1), shRct.y + (shRct.height >> 1), cntNonZ, ratioFromAll);
-							OutputDebugStringA(buf);
+							shot.setTo(0);
+							drawContours(shot, cd.mContour, idx, 255, 0, 8);
+							drawContours(shot, cntrDataFirst[idxFirst].mContour, idx, 128, 0, 8);
+							cv::setMouseCallback("shot", mouse_callback, &metaData);
+							cv::imshow("cntr", shot);
+							cv::waitKey();
+							if (cd==cntrDataFirst[idxFirst])
+							{
+								shot.setTo(0);
+								drawContours(shot, contours, idx, 255, 0, 8, hierarchy);
+								cv::setMouseCallback("shot", mouse_callback, &metaData);
+								cv::imshow("cntr", shot);
+								cv::waitKey();
+							}
 						}
 /*************************/
-						shot.setTo(0);
-						drawContours(shot, contours, idx, 255, 0, 8, hierarchy);
-						cv::setMouseCallback("shot", mouse_callback, &metaData);
-						cv::imshow("cntr", shot);
-						cv::waitKey();
 					}
 				}
 			}
