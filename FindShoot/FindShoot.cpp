@@ -250,8 +250,8 @@ int main()
 
 	cvtColor(smallFrame, firstFrame, COLOR_BGR2GRAY);
 	drawPolyRect(smallFrame, metaData.mPoints, Scalar(255, 0, 17), 1);
-	cv::imshow("TargetOnFrame", smallFrame);
-	cv::setMouseCallback("TargetOnFrame", mouse_callback);
+	//cv::imshow("TargetOnFrame", smallFrame);
+	//cv::setMouseCallback("TargetOnFrame", mouse_callback);
 	cv::equalizeHist(firstFrame, firstFrame);
 	firstFrame.copyTo(smallFrame);
 	
@@ -268,6 +268,8 @@ int main()
 	
 	drawPolyRect(target, metaData.mPoints, Scalar(0), -1);
 	//Find the edges inside the map
+	int fltrSz = 3;
+	blur(smallFrame, smallFrame,Size(fltrSz, fltrSz));
 	Mat dx, dy, grad, grad8;
 	cv::Sobel(smallFrame, dx, CV_16S, 1, 0);
 	dx.setTo(0, map);
@@ -277,13 +279,11 @@ int main()
 	cv::pow(dy, 2, dy);
 	grad = dx + dy;
 	
-	int gradThr = 100;
 	minMaxLoc(grad, &mn, &mx);
 	grad -= mn;
 	if (mx > 0)
 	{
 		grad.convertTo(grad8, CV_8UC1, 255 / mx);
-		cv::threshold(grad8, grad8, gradThr, 255,THRESH_BINARY);
 	}
 	else
 		grad8.setTo(0);
@@ -292,7 +292,7 @@ int main()
 	grad8.copyTo(firstGrad);
 
 	//Dilation(target, target, 1);
-	cv::imshow("grad", grad8);
+	//cv::imshow("grad", grad8);
 	//map.setTo(255);
 	//rectangle(map, targetRect, 0, -1);
 	Mat mapNot;
@@ -301,9 +301,8 @@ int main()
 	double ffMin=0, ffMax=0;
 	int ffMinIdx=0, ffMaxIdx=0;
 	smallFrame.copyTo(firstFrame);
-	int fltrSz = 3;
-	//blur(firstFrame, firstFrame,Size(fltrSz, fltrSz));
-	cv::imshow("firstFrame", firstFrame);
+
+	//cv::imshow("firstFrame", firstFrame);
 	minMaxIdx(firstFrame, &ffMin, &ffMax,&ffMinIdx,&ffMaxIdx,mapNot);
 	int bg = cvFloor((ffMin+ffMax)*0.5);
 	cv::threshold(target, target, 1, 255, THRESH_BINARY);
@@ -312,15 +311,16 @@ int main()
 	Mat shiftGrad = grad8(Rect(0, 0, sz.width - 1, sz.height - 1));
 
 	rectangle(target, rectInBound, Scalar(100));
-	cv::imshow("mapZ", map);
-	cv::imshow("mapZ1", target);
-	cv::waitKey();
-	srand(1);
 	Mat shot = map.clone();
 	Mat mapMar(map, rctMargin);
 	Mat targetMar(target, rctMargin);
-	int thrOfGrad = 100;
-	cv::threshold(firstGrad, firstGrad, thrOfGrad, 255, THRESH_BINARY);
+	int thrOfGrad = 50;
+	Canny(firstFrame, firstGrad, thrOfGrad, 2 * thrOfGrad);
+	firstGrad.setTo(0, map);
+	cv::imshow("firstFrame", firstFrame);
+	cv::imshow("firstGrad", firstGrad);
+	cv::waitKey();
+	//cv::threshold(firstGrad, firstGrad, thrOfGrad, 255, THRESH_BINARY);
 	//Map all the contours of the first frame
 	vector<vector<Point> > contoursFirst;
 	vector<Vec4i> hierarchyFirst;
@@ -360,12 +360,12 @@ int main()
 			//	cv::waitKey();
 			//}
 
-			if (cd.mRatioFromAll < 0.0001)//too small delete it
-			{
-				contoursFirst.erase(contoursFirst.begin() + idx);
-				--idx;
-			}
-			else
+			//if (cd.mRatioFromAll < 0.0001)//too small delete it
+			//{
+			//	contoursFirst.erase(contoursFirst.begin() + idx);
+			//	--idx;
+			//}
+			//else
 			{
 				cntrDataFirst.push_back(cd);
 			}
@@ -378,10 +378,11 @@ int main()
 	firstGradMar = firstGrad(rctMargin);
 	Mat frameRgb;
 	Mat frameRgbDisplayed;
-	
+	cv::imshow("gradFirst", firstGrad);
 	shot.setTo(0);
 	vector<Rect> foundShotRects;
 	vector<Scalar> colors;
+	vector<ContourData> shotsCand;
 	bool isToBreak = false;
 	int sumX = 0, sumY = 0;
 	while(1)
@@ -416,25 +417,26 @@ int main()
 			break;
 		//smallFrame.setTo(bg, map);
 		cv::equalizeHist(smallFrame, smallFrame);
-
-		cv::Sobel(smallFrame, dx, CV_16S, 1, 0);
-		dx.setTo(0, map);
-		cv::Sobel(smallFrame, dy, CV_16S, 0, 1);
-		dy.setTo(0, map);
-		cv::pow(dx, 2, dx);
-		cv::pow(dy, 2, dy);
-		grad = dx + dy;
-		//double mn, mx;
-		//minMaxLoc(grad, &mn, &mx);
-		grad -= mn;
-		if (mx > 0)
-		{
-			grad.convertTo(grad8, CV_8UC1, 255 / mx);
-			cv::threshold(grad8, grad8Thr, thrOfGrad, 255, THRESH_BINARY);
-		}
-		else
-			grad8.setTo(0);
-
+		blur(smallFrame, smallFrame, Size(fltrSz, fltrSz));
+		//cv::Sobel(smallFrame, dx, CV_16S, 1, 0);
+		//dx.setTo(0, map);
+		//cv::Sobel(smallFrame, dy, CV_16S, 0, 1);
+		//dy.setTo(0, map);
+		//cv::pow(dx, 2, dx);
+		//cv::pow(dy, 2, dy);
+		//grad = dx + dy;
+		////double mn, mx;
+		////minMaxLoc(grad, &mn, &mx);
+		//grad -= mn;
+		//if (mx > 0)
+		//{
+		//	grad.convertTo(grad8, CV_8UC1, 255 / mx);
+		//	cv::threshold(grad8, grad8Thr, thrOfGrad, 255, THRESH_BINARY);
+		//}
+		//else
+		//	grad8.setTo(0);
+		Canny(smallFrame, grad8Thr, thrOfGrad, 2 * thrOfGrad);
+		grad8Thr.setTo(0, map);
 		int x = 0, y = 0;
 		bool isToDisplay = false;
 		//if (cntFrameNum == 738)	isToDisplay = true;
@@ -460,50 +462,10 @@ int main()
 		{
 			int idx = 0;
 			double arMax = 0;
+			vector<ContourData> cdsFrame;
 			for (; idx < contours.size(); idx++)
 			{
-				double ar = contourArea(contours[idx]);
-				Rect shRct = boundingRect(contours[idx]);
-				if (shRct.width == 0 || shRct.height == 0)
-					continue;
-				float ratioWh = min(shRct.width, shRct.height) / (float)max(shRct.width, shRct.height);
-				int cntNonZ = (int)contours[idx].size();// countNonZero(onlyCntr);
-				float ratioAr = cntNonZ / (float)(shRct.width*shRct.height);
-				float ratioFromAll = cntNonZ / (float)(sz.width*sz.height);
-				char buf[256] = { '\0' };
-				sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
-					cntFrameNum, idx, numOfContours, ar, shRct.width, shRct.height, ratioWh, shRct.x + (shRct.width >> 1), shRct.y + (shRct.height >> 1), cntNonZ, ratioFromAll);
-				OutputDebugStringA(buf);
-				if (cntNonZ > rectAreaMax)
-				{
-					rectAreaMax = cntNonZ;
-					idxMax = idx;
-					pntCgMax.x = shRct.x + shRct.width*0.5f;
-					pntCgMax.y = shRct.y + shRct.height*0.5f;
-				}
-				if(cntNonZ < 10 || (shRct.width>25 && shRct.height>25))//too small delete it
-				{
-					contours.erase(contours.begin() + idx);
-					--idx;
-					numOfContours--;
-				}
-			}
-			/*If a n out of focus frame than the contours will break, skip these frames*/
-			if (rectAreaMax / (float)rectAreaMaxFirst < 0.65)
-			{
-				cout << rectAreaMax / (float)rectAreaMaxFirst << endl;
-				cv::imshow("gradThr", grad8Thr);
-				cv::imshow("skipping", frameRgb);
-				cv::waitKey();
-				continue;
-			}
-			/*This is the movment between the frames*/
-			x = pntCgMax.x - pntCgMaxFirst.x;
-			y = pntCgMax.y - pntCgMaxFirst.y;
-
-			for (idx=0; idx < contours.size(); idx++)
-			{
-				ContourData cd(contours[idx],sz);
+				ContourData cd(contours[idx], sz);
 				if (cd.mShRct.width == 0 || cd.mShRct.height == 0)
 					continue;
 
@@ -511,6 +473,44 @@ int main()
 				sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
 					cntFrameNum, idx, numOfContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mCg.x, cd.mCg.y, cd.mCntNonZ, cd.mRatioFromAll);
 				OutputDebugStringA(buf);
+				if (cd.mCntNonZ > rectAreaMax)
+				{
+					rectAreaMax = cd.mCntNonZ;
+					idxMax = idx;
+					pntCgMax = cd.mCg;
+				}
+				if (cd.mCntNonZ < 10 || (cd.mShRct.width > 25 && cd.mShRct.height > 25))//too small delete it
+				{
+					contours.erase(contours.begin() + idx);
+					--idx;
+					numOfContours--;
+				}
+				else
+					cdsFrame.push_back(cd);
+			}
+			/*If a n out of focus frame than the contours will break, skip these frames*/
+			if (rectAreaMax / (float)rectAreaMaxFirst < 0.65)
+			{
+				cout <<"FindShot:*****Skipping "<< cntFrameNum<<" area "<< rectAreaMax / (float)rectAreaMaxFirst << endl;
+				//cv::imshow("gradThr", grad8Thr);
+				//cv::imshow("skipping", frameRgb);
+				//cv::waitKey();
+				continue;
+			}
+			/*This is the movment between the frames*/
+			x = pntCgMax.x - pntCgMaxFirst.x;
+			y = pntCgMax.y - pntCgMaxFirst.y;
+			Point pntMov(x, y);
+			for (idx=0; idx < cdsFrame.size(); idx++)
+			{
+				ContourData cd = cdsFrame[idx] + pntMov;
+				if (cd.mShRct.width == 0 || cd.mShRct.height == 0)
+					continue;
+
+				//char buf[256] = { '\0' };
+				//sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
+				//	cntFrameNum, idx, numOfContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mCg.x, cd.mCg.y, cd.mCntNonZ, cd.mRatioFromAll);
+				//OutputDebugStringA(buf);
 
 				if ((cd.mAr > arMax) &&
 					(cd.mAr > 10 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 2 && cd.mShRct.height > 2 && cd.mRatioWh > 0.54) ||
@@ -518,28 +518,43 @@ int main()
 					(cd.mAr >= 3 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 4 && cd.mShRct.height >= 4 && cd.mRatioWh > 0.79))
 				{
 					/*Need to go over the first contours compare its cg and MatchShape and see if this one is new, if yes add it to the list*/
+					
+/*************************/
+					bool isFound = false;
+					int idxFirst = 0;
+					for (; idxFirst < cntrDataFirst.size(); idxFirst++)
 					{
-/*************************/
-						int idxFirst = 0;
-						for (; idxFirst < cntrDataFirst.size(); idxFirst++)
+						//shot.setTo(0);
+						//polylines(shot, cd.mContour, true, 255, 1, 8);
+						//polylines(shot, cntrDataFirst[idxFirst].mContour, true, 128, 1, 8);
+						//cv::setMouseCallback("shot", mouse_callback, &metaData);
+						//cv::imshow("cntr", shot);
+						//cv::waitKey();
+						cout << idxFirst << endl;
+						if (cd==cntrDataFirst[idxFirst])
 						{
-							shot.setTo(0);
-							drawContours(shot, cd.mContour, idx, 255, 0, 8);
-							drawContours(shot, cntrDataFirst[idxFirst].mContour, idx, 128, 0, 8);
-							cv::setMouseCallback("shot", mouse_callback, &metaData);
-							cv::imshow("cntr", shot);
-							cv::waitKey();
-							if (cd==cntrDataFirst[idxFirst])
-							{
-								shot.setTo(0);
-								drawContours(shot, contours, idx, 255, 0, 8, hierarchy);
-								cv::setMouseCallback("shot", mouse_callback, &metaData);
-								cv::imshow("cntr", shot);
-								cv::waitKey();
-							}
+							isFound = true;
+							break;
 						}
-/*************************/
 					}
+					if (!isFound)
+					{						
+
+						shotsCand.push_back(cd);
+						
+						shot.setTo(0);
+						for (int i=0; i < shotsCand.size(); i++)
+						{
+							polylines(shot, shotsCand[i].mContour, true, 255, 1, 8);
+						}
+						cv::imshow("gradThr", grad8Thr);
+						cv::imshow("Frame", smallFrame);
+						cv::imshow("cntr", shot);
+						//cv::waitKey();
+						cntrDataFirst.push_back(cd);
+					}
+/*************************/
+					
 				}
 			}
 

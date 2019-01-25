@@ -15,8 +15,9 @@ public:
 	ContourData(const vector<Point>& cntr, Size sz);
 	ContourData* operator =(const ContourData& cdIn);
 	bool operator ==(const ContourData& cdIn);
+	ContourData operator +(const Point p);
 
-	static const float mMatchThr=0.95f;
+	const static float mMatchThr;
 	Size mPicSize;
 	vector<Point> mContour;
 	double mAr;

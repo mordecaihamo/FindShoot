@@ -1,10 +1,12 @@
 #include "pch.h"
 #include "ContourData.h"
+#include <iostream>
 
+
+const float  ContourData::mMatchThr = 50.0f;
 
 ContourData::ContourData()
 {
-	//mMatchThr = 0.95f;
 	mAr = 0.0f;
 	mShRct.x = 0;
 	mShRct.y = 0;
@@ -61,17 +63,38 @@ ContourData* ContourData::operator =(const ContourData& cdIn)
 	return this;
 }
 
+ContourData ContourData::operator +(const Point p)
+{
+	ContourData cdOut = *this;
+	cdOut.mShRct.x += p.x;
+	cdOut.mShRct.y += p.y;
+	cdOut.mCg.x += p.x;
+	cdOut.mCg.y += p.y;
+	for (int i = 0; i < cdOut.mContour.size(); ++i)
+	{
+		cdOut.mContour[i].x += p.x;
+		cdOut.mContour[i].y += p.y;
+	}
+	return cdOut;
+}
+
 bool ContourData::operator ==(const ContourData& cdIn)
 {
+	bool prnt = false;
 	bool res = false;
+	if (prnt) cout << "(" << mCg.x << "," << mCg.y << ")" << " (" << cdIn.mCg.x << "," << cdIn.mCg.y << ")" << endl;
 	float dx = abs(cdIn.mCg.x - mCg.x);
 	float dy = abs(cdIn.mCg.y - mCg.y);
+	if (prnt) cout << "(" << dx << "," << dy << ")" << endl;
 	if (dx > 3 || dy > 3)
 		return res;
-	if (min(mCntNonZ, cdIn.mCntNonZ) / max(mCntNonZ, cdIn.mCntNonZ) < 0.7)
+	float szRatio = mCntNonZ / (float)cdIn.mCntNonZ;
+	if (prnt) cout << szRatio << endl;
+	if (szRatio < 0.5f)
 		return res;
-	double matchRes = matchShapes(mContour, cdIn.mContour, ShapeMatchModes::CONTOURS_MATCH_I3,0);
-	if (matchRes > 0.1)
+	double matchRes = matchShapes(mContour, cdIn.mContour, ShapeMatchModes::CONTOURS_MATCH_I2,0);
+	if (prnt) cout << matchRes << endl;
+	if (matchRes > mMatchThr)
 		return res;
 	else
 		res = true;
