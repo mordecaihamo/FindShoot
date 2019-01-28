@@ -329,6 +329,7 @@ int main()
 	int numOfFirstContours = (int)contoursFirst.size();
 	int idxMaxFirst = -1;
 	int rectAreaMaxFirst = 0;
+	int idxOfLargeInTheFirstArray = -1;
 	Point2f pntCgMaxFirst(0, 0);
 	vector<ContourData> cntrDataFirst;
 
@@ -338,18 +339,19 @@ int main()
 		double arMax = 0;
 		for (; idx < contoursFirst.size(); idx++)
 		{
-			ContourData cd(contoursFirst[idx], sz);
+			ContourData cd(contoursFirst[idx], sz,cntFrameNum,idx);
 			if (cd.mShRct.width == 0 || cd.mShRct.height == 0)
 				continue;
 			char buf[256] = { '\0' };
 			sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
-				cntFrameNum, idx, numOfFirstContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mShRct.x + (cd.mShRct.width >> 1), cd.mShRct.y + (cd.mShRct.height >> 1), cd.mCntNonZ, cd.mRatioFromAll);
+				cntFrameNum, idx, numOfFirstContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mCg.x, cd.mCg.y, cd.mLen, cd.mRatioFromAll);
 			OutputDebugStringA(buf);
-			if (cd.mCntNonZ > rectAreaMaxFirst)
+			if (cd.mLen > rectAreaMaxFirst)
 			{
-				rectAreaMaxFirst = cd.mCntNonZ;
+				rectAreaMaxFirst = cd.mLen;
 				idxMaxFirst = idx;
 				pntCgMaxFirst = cd.mCg;
+				idxOfLargeInTheFirstArray = (int)cntrDataFirst.size();
 			}
 			//if (cntFrameNum == 160)
 			//{
@@ -372,6 +374,10 @@ int main()
 		}
 	}
 	int numOfInitCntr = (int)contoursFirst.size();
+	for (int i = 0; i < numOfInitCntr; ++i)
+	{
+		cntrDataFirst[i].SetDistFromLargeCorners(cntrDataFirst[idxOfLargeInTheFirstArray].mCorners);
+	}
 
 	Mat grad8Thr;
 	Mat firstGradMar, grag8ThrMar;
@@ -463,23 +469,25 @@ int main()
 			int idx = 0;
 			double arMax = 0;
 			vector<ContourData> cdsFrame;
+			int idxOfLargeInTheArray = -1;
 			for (; idx < contours.size(); idx++)
 			{
 				ContourData cd(contours[idx], sz);
 				if (cd.mShRct.width == 0 || cd.mShRct.height == 0)
 					continue;
 
-				char buf[256] = { '\0' };
-				sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
-					cntFrameNum, idx, numOfContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mCg.x, cd.mCg.y, cd.mCntNonZ, cd.mRatioFromAll);
-				OutputDebugStringA(buf);
-				if (cd.mCntNonZ > rectAreaMax)
+				//char buf[256] = { '\0' };
+				//sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
+				//	cntFrameNum, idx, numOfContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mCg.x, cd.mCg.y, cd.mLen, cd.mRatioFromAll);
+				//OutputDebugStringA(buf);
+				if (cd.mLen > rectAreaMax)
 				{
-					rectAreaMax = cd.mCntNonZ;
+					rectAreaMax = cd.mLen;
 					idxMax = idx;
 					pntCgMax = cd.mCg;
+					idxOfLargeInTheArray = (int)cdsFrame.size();
 				}
-				if (cd.mCntNonZ < 10 || (cd.mShRct.width > 25 && cd.mShRct.height > 25))//too small delete it
+				if (cd.mLen < 10 || (cd.mShRct.width > 25 && cd.mShRct.height > 25))//too small delete it
 				{
 					contours.erase(contours.begin() + idx);
 					--idx;
@@ -491,7 +499,7 @@ int main()
 			/*If a n out of focus frame than the contours will break, skip these frames*/
 			if (rectAreaMax / (float)rectAreaMaxFirst < 0.65)
 			{
-				cout <<"FindShot:*****Skipping "<< cntFrameNum<<" area "<< rectAreaMax / (float)rectAreaMaxFirst << endl;
+				//cout <<"FindShot:*****Skipping "<< cntFrameNum<<" area "<< rectAreaMax / (float)rectAreaMaxFirst << endl;
 				//cv::imshow("gradThr", grad8Thr);
 				//cv::imshow("skipping", frameRgb);
 				//cv::waitKey();
@@ -501,9 +509,13 @@ int main()
 			x = pntCgMax.x - pntCgMaxFirst.x;
 			y = pntCgMax.y - pntCgMaxFirst.y;
 			Point pntMov(x, y);
-			for (idx=0; idx < cdsFrame.size(); idx++)
+			for (idx=0; idx < (int)cdsFrame.size(); idx++)
 			{
-				ContourData cd = cdsFrame[idx] + pntMov;
+				cdsFrame[idx].mFrameNum = cntFrameNum;
+				cdsFrame[idx].mIdxCntr = idx;
+				ContourData cd = cdsFrame[idx];// +pntMov;
+				cd.SetDistFromLargeCorners(cdsFrame[idxOfLargeInTheArray].mCorners);
+				cd = cd - cd.mDistFromLargeCorners[0];
 				if (cd.mShRct.width == 0 || cd.mShRct.height == 0)
 					continue;
 
@@ -522,7 +534,7 @@ int main()
 /*************************/
 					bool isFound = false;
 					int idxFirst = 0;
-					for (; idxFirst < cntrDataFirst.size(); idxFirst++)
+					for (; idxFirst < (int)cntrDataFirst.size(); idxFirst++)
 					{
 						//shot.setTo(0);
 						//polylines(shot, cd.mContour, true, 255, 1, 8);
@@ -530,8 +542,11 @@ int main()
 						//cv::setMouseCallback("shot", mouse_callback, &metaData);
 						//cv::imshow("cntr", shot);
 						//cv::waitKey();
-						cout << idxFirst << endl;
-						if (cd==cntrDataFirst[idxFirst])
+						//cout << idxFirst << endl;
+						ContourData cdf = cntrDataFirst[idxFirst];
+						cdf = cdf - cdf.mDistFromLargeCorners[0];
+					
+						if (cd==cdf)
 						{
 							isFound = true;
 							break;
@@ -547,10 +562,14 @@ int main()
 						{
 							polylines(shot, shotsCand[i].mContour, true, 255, 1, 8);
 						}
+						char buf[256] = { '\0' };
+						sprintf_s(buf, "FindShot: New F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
+							cntFrameNum, idx, numOfContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mCg.x, cd.mCg.y, cd.mLen, cd.mRatioFromAll);
+						OutputDebugStringA(buf);						
 						cv::imshow("gradThr", grad8Thr);
 						cv::imshow("Frame", smallFrame);
 						cv::imshow("cntr", shot);
-						//cv::waitKey();
+						cv::waitKey();
 						cntrDataFirst.push_back(cd);
 					}
 /*************************/
