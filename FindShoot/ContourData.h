@@ -20,6 +20,7 @@ public:
 	ContourData operator +(const Point p);
 	ContourData operator -(const Point p);
 	void SetDistFromLargeCorners(const vector<Point>& cornersOfLarge);
+	void SetDistFromLargeCenter(const Point& pLarge);
 
 	const static float mMatchThr;
 	Size mPicSize;
@@ -36,5 +37,6 @@ public:
 	int mIdxCntr;
 	vector<Point> mCorners;
 	vector<Point> mDistFromLargeCorners;
+	Point mDistToCenterOfLarge;
 };
 #endif

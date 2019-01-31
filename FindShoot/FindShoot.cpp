@@ -377,6 +377,7 @@ int main()
 	for (int i = 0; i < numOfInitCntr; ++i)
 	{
 		cntrDataFirst[i].SetDistFromLargeCorners(cntrDataFirst[idxOfLargeInTheFirstArray].mCorners);
+		cntrDataFirst[i].SetDistFromLargeCenter(cntrDataFirst[idxOfLargeInTheFirstArray].mCg);
 	}
 
 	Mat grad8Thr;
@@ -405,11 +406,8 @@ int main()
 		//	continue;
 		
 		resize(frame, frameRgb, sz);
-		//Mat Rgbs[3];
-		//split(frameRgb, Rgbs);
 		cvtColor(frame, frame, COLOR_BGR2GRAY);
 		smallFrame.copyTo(prevFrame);
-		//Rgbs[1].copyTo(smallFrame);
 		resize(frame, smallFrame, sz);
 		if (rot != 0)
 		{
@@ -421,36 +419,15 @@ int main()
 		// If the frame is empty, break immediately
 		if (smallFrame.empty())
 			break;
-		//smallFrame.setTo(bg, map);
+
 		cv::equalizeHist(smallFrame, smallFrame);
 		blur(smallFrame, smallFrame, Size(fltrSz, fltrSz));
-		//cv::Sobel(smallFrame, dx, CV_16S, 1, 0);
-		//dx.setTo(0, map);
-		//cv::Sobel(smallFrame, dy, CV_16S, 0, 1);
-		//dy.setTo(0, map);
-		//cv::pow(dx, 2, dx);
-		//cv::pow(dy, 2, dy);
-		//grad = dx + dy;
-		////double mn, mx;
-		////minMaxLoc(grad, &mn, &mx);
-		//grad -= mn;
-		//if (mx > 0)
-		//{
-		//	grad.convertTo(grad8, CV_8UC1, 255 / mx);
-		//	cv::threshold(grad8, grad8Thr, thrOfGrad, 255, THRESH_BINARY);
-		//}
-		//else
-		//	grad8.setTo(0);
 		Canny(smallFrame, grad8Thr, thrOfGrad, 2 * thrOfGrad);
 		grad8Thr.setTo(0, map);
 		int x = 0, y = 0;
 		bool isToDisplay = false;
 		//if (cntFrameNum == 738)	isToDisplay = true;
-		//cout << cntFrameNum<<" Movment search" << endl;
-		//FindMovment(grad8Thr, firstGrad, x, y, rectInBound, look, false, isToDisplay);
 		Rect movRct(rctMargin);
-		movRct.x += x;
-		movRct.y += y;
 
 		vector<vector<Point> > contours;
 		vector<Vec4i> hierarchy;
@@ -475,7 +452,12 @@ int main()
 				ContourData cd(contours[idx], sz);
 				if (cd.mShRct.width == 0 || cd.mShRct.height == 0)
 					continue;
-
+				//shot.setTo(0);
+				//polylines(shot, cd.mContour, true, 255, 1, 8);
+				//cv::setMouseCallback("shot", mouse_callback, &metaData);
+				//cv::imshow("cntr", shot);
+				//cv::imshow("grad", grad8Thr);
+				//cv::waitKey();
 				//char buf[256] = { '\0' };
 				//sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
 				//	cntFrameNum, idx, numOfContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mCg.x, cd.mCg.y, cd.mLen, cd.mRatioFromAll);
@@ -487,7 +469,7 @@ int main()
 					pntCgMax = cd.mCg;
 					idxOfLargeInTheArray = (int)cdsFrame.size();
 				}
-				if (cd.mLen < 10 || (cd.mShRct.width > 25 && cd.mShRct.height > 25))//too small delete it
+				if (cd.mLen < 10 /*|| (cd.mShRct.width > 25 && cd.mShRct.height > 25)*/)//too small delete it
 				{
 					contours.erase(contours.begin() + idx);
 					--idx;
@@ -506,16 +488,18 @@ int main()
 				continue;
 			}
 			/*This is the movment between the frames*/
-			x = pntCgMax.x - pntCgMaxFirst.x;
-			y = pntCgMax.y - pntCgMaxFirst.y;
+			//pntCgMax = cdsFrame[idxOfLargeInTheArray].mCg;
+			x = cdsFrame[idxOfLargeInTheArray].mShRct.x - cntrDataFirst[idxOfLargeInTheFirstArray].mShRct.x;
+			y = cdsFrame[idxOfLargeInTheArray].mShRct.y - cntrDataFirst[idxOfLargeInTheFirstArray].mShRct.y;
+			//x = pntCgMax.x - pntCgMaxFirst.x;
+			//y = pntCgMax.y - pntCgMaxFirst.y;
 			Point pntMov(x, y);
 			for (idx=0; idx < (int)cdsFrame.size(); idx++)
 			{
 				cdsFrame[idx].mFrameNum = cntFrameNum;
 				cdsFrame[idx].mIdxCntr = idx;
-				ContourData cd = cdsFrame[idx];// +pntMov;
-				cd.SetDistFromLargeCorners(cdsFrame[idxOfLargeInTheArray].mCorners);
-				cd = cd - cd.mDistFromLargeCorners[0];
+				cdsFrame[idx].SetDistFromLargeCenter(pntCgMax);
+				ContourData cd = cdsFrame[idx];
 				if (cd.mShRct.width == 0 || cd.mShRct.height == 0)
 					continue;
 
@@ -535,28 +519,92 @@ int main()
 					bool isFound = false;
 					int idxFirst = 0;
 					for (; idxFirst < (int)cntrDataFirst.size(); idxFirst++)
-					{
+					{	
+						ContourData cdf = cntrDataFirst[idxFirst];
 						//shot.setTo(0);
 						//polylines(shot, cd.mContour, true, 255, 1, 8);
-						//polylines(shot, cntrDataFirst[idxFirst].mContour, true, 128, 1, 8);
+						//polylines(shot, cdf.mContour, true, 128, 1, 8);
 						//cv::setMouseCallback("shot", mouse_callback, &metaData);
 						//cv::imshow("cntr", shot);
+						//cv::imshow("grad", grad8Thr);
 						//cv::waitKey();
 						//cout << idxFirst << endl;
-						ContourData cdf = cntrDataFirst[idxFirst];
-						cdf = cdf - cdf.mDistFromLargeCorners[0];
+						if (cntFrameNum == -94 && idx == 7)// && idxFirst == 7)
+						{
+							cout << idxFirst << endl;
+							shot.setTo(0);
+							polylines(shot, cdsFrame[idxOfLargeInTheArray].mContour, true, 255, 1, 8);
+							polylines(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mContour, true, 128, 1, 8);
+							polylines(shot, cd.mContour, true, 255, 1, 8);
+							polylines(shot, cdf.mContour, true, 128, 1, 8);
+							circle(shot, cdsFrame[idxOfLargeInTheArray].mCg, 3, 255);
+							circle(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mCg, 3, 128);
+							cv::imshow("cntr", shot);
+							cv::waitKey();
+						}
 					
 						if (cd==cdf)
 						{
 							isFound = true;
+							cntrDataFirst.push_back(cd + pntMov);
 							break;
+						}
+					}
+					/*
+					Find shotsCands in the current frame, if they does not exists, remove them.
+					*/
+					for (idxFirst = 0; idxFirst < (int)shotsCand.size(); idxFirst++)
+					{
+						ContourData cdf = shotsCand[idxFirst];
+						bool isFoundShot = false;
+							
+						for (idx = 0; idx < (int)cdsFrame.size(); idx++)
+						{
+							ContourData cdToFindShot = cdsFrame[idx];
+							if (cdToFindShot.mShRct.width == 0 || cdToFindShot.mShRct.height == 0)
+								continue;
+
+							if ((cdToFindShot.mAr > arMax) &&
+								(cdToFindShot.mAr > 10 && cdToFindShot.mShRct.width < 20 && cdToFindShot.mShRct.height < 20 && cdToFindShot.mShRct.width > 2 && cdToFindShot.mShRct.height > 2 && cdToFindShot.mRatioWh > 0.54) ||
+								(cdToFindShot.mAr > 25 && cdToFindShot.mShRct.width < 20 && cdToFindShot.mShRct.height < 20 && cdToFindShot.mShRct.width > 4 && cdToFindShot.mShRct.height > 4 && cdToFindShot.mRatioWh > 0.45) ||
+								(cdToFindShot.mAr >= 3 && cdToFindShot.mShRct.width < 20 && cdToFindShot.mShRct.height < 20 && cdToFindShot.mShRct.width > 4 && cdToFindShot.mShRct.height >= 4 && cdToFindShot.mRatioWh > 0.79))
+							{
+
+								if (cntFrameNum == -112 && idx == 2 && idxFirst == 0)
+								{
+									cout << idxFirst << endl;
+									shot.setTo(0);
+									polylines(shot, cdsFrame[idxOfLargeInTheArray].mContour, true, 255, 1, 8);
+									polylines(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mContour, true, 128, 1, 8);
+									polylines(shot, cdToFindShot.mContour, true, 255, 1, 8);
+									polylines(shot, cdf.mContour, true, 128, 1, 8);
+									circle(shot, cdsFrame[idxOfLargeInTheArray].mCg, 3, 255);
+									circle(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mCg, 3, 128);
+									cv::imshow("cntrShots", shot);
+									cv::waitKey();
+								}
+
+								if (cdToFindShot == cdf)
+								{
+									isFoundShot = true;
+									break;
+								}
+							}
+						}
+						if (!isFoundShot)
+						{
+							shotsCand.erase(shotsCand.begin() + idxFirst);
+							if (idxFirst > 0)
+							{
+								--idxFirst;
+							}
 						}
 					}
 					if (!isFound)
 					{						
-
+						cd = cd + pntMov;
 						shotsCand.push_back(cd);
-						
+						cntrDataFirst.push_back(cd);
 						shot.setTo(0);
 						for (int i=0; i < shotsCand.size(); i++)
 						{

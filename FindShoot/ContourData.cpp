@@ -3,7 +3,7 @@
 #include <iostream>
 #include "opencv2/highgui.hpp"
 
-const float  ContourData::mMatchThr = 0.6f;
+const float  ContourData::mMatchThr = 0.51f;
 
 void CopyContourData(ContourData& dest, const ContourData& src)
 {
@@ -20,6 +20,7 @@ void CopyContourData(ContourData& dest, const ContourData& src)
 	dest.mIdxCntr = src.mIdxCntr;
 	dest.mCorners = src.mCorners;
 	dest.mDistFromLargeCorners = src.mDistFromLargeCorners;
+	dest.mDistToCenterOfLarge = src.mDistToCenterOfLarge;
 }
 
 ContourData::ContourData()
@@ -35,6 +36,7 @@ ContourData::ContourData()
 	mLen = 0;
 	mCorners.resize(4, Point(0, 0));
 	mDistFromLargeCorners.resize(4, Point(-1, -1));
+	mDistToCenterOfLarge = Point(-1, -1);
 }
 
 ContourData::ContourData(const ContourData& cdIn)
@@ -81,7 +83,15 @@ ContourData::ContourData(const vector<Point>& cntr, Size sz):ContourData()
 		mCorners[2] = b;
 		mCorners[3] = l;
 	}
-
+	mCg.x = mShRct.x + 0.5*mShRct.width;
+	mCg.y = mShRct.y + 0.5*mShRct.height;
+	//for (Point p : mCorners)
+	//{
+	//	mCg.x += p.x;
+	//	mCg.y += p.y;
+	//}
+	//mCg.x = round(0.25*mCg.x);
+	//mCg.y = round(0.25*mCg.y);
 }
 
 ContourData::ContourData(const vector<Point>& cntr, Size sz, int frameNum, int idx):ContourData(cntr, sz)
@@ -150,12 +160,14 @@ bool ContourData::operator ==(const ContourData& cdIn)
 	int m = 0, o = 0;
 	int numOfFoundPix = 0;
 	int minDis = 2;
+	int xMov = mDistToCenterOfLarge.x - cdIn.mDistToCenterOfLarge.x;
+	int yMov = mDistToCenterOfLarge.y - cdIn.mDistToCenterOfLarge.y;
 	for (; m < mLen; ++m)
 	{
 		for (o=0; o < cdIn.mLen; ++o)
 		{
-			int dxP = abs(mContour[m].x - cdIn.mContour[o].x);
-			int dyP = abs(mContour[m].y - cdIn.mContour[o].y);
+			int dxP = abs((mContour[m].x - xMov) - (cdIn.mContour[o].x));
+			int dyP = abs((mContour[m].y - yMov) - (cdIn.mContour[o].y));
 			if (dxP<minDis && dyP<minDis)
 			{
 				++numOfFoundPix;
@@ -164,14 +176,19 @@ bool ContourData::operator ==(const ContourData& cdIn)
 		}
 	}
 	float matchRatio = (float)numOfFoundPix / (float)mLen;
+	float matchRatioToIn = (float)numOfFoundPix / (float)cdIn.mLen;
+	matchRatio = max(matchRatio, matchRatioToIn);
+	if (numOfFoundPix >= cdIn.mLen)
+	{
+		matchRatio = 1.0f;
+	}
 	//double matchRes = matchShapes(mContour, cdIn.mContour, ShapeMatchModes::CONTOURS_MATCH_I2,0);
 	//if (prnt) cout << matchRes << endl;
 	//if (matchRes > mMatchThr)
 	//	return res;
 	//else
 	//	res = true;
-	if (mFrameNum==70 && mIdxCntr==9 && cdIn.mIdxCntr==14)
-		prnt = true;
+	//if (mFrameNum==93 && mIdxCntr==6 && cdIn.mIdxCntr==7)		prnt = true;
 	if (prnt)
 	{
 		Mat plineCmp(mPicSize, CV_8UC1);
@@ -198,3 +215,10 @@ void ContourData::SetDistFromLargeCorners(const vector<Point>& cornersOfLarge)
 		mDistFromLargeCorners[i].y = mCorners[i].y - cornersOfLarge[i].y;
 	}
 }
+
+void ContourData::SetDistFromLargeCenter(const Point& pLarge)
+{
+	mDistToCenterOfLarge.x = pLarge.x;
+	mDistToCenterOfLarge.y = pLarge.y;
+}
+
