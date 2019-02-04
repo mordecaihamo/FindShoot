@@ -252,7 +252,9 @@ int main()
 	drawPolyRect(smallFrame, metaData.mPoints, Scalar(255, 0, 17), 1);
 	//cv::imshow("TargetOnFrame", smallFrame);
 	//cv::setMouseCallback("TargetOnFrame", mouse_callback);
+	int fltrSz = 3;
 	cv::equalizeHist(firstFrame, firstFrame);
+	blur(firstFrame, firstFrame, Size(fltrSz, fltrSz));
 	firstFrame.copyTo(smallFrame);
 	
 	Rect rctMargin;
@@ -287,7 +289,7 @@ int main()
 	Mat shot = map.clone();
 	Mat mapMar(map, rctMargin);
 	Mat targetMar(target, rctMargin);
-	int thrOfGrad = 50;
+	int thrOfGrad = 75;
 	int maxGrayLevelAllowed = 150;
 //#undef min	cv::min(firstFrame, maxGrayLevelAllowed, firstFrame);
 	Canny(firstFrame, firstGrad, thrOfGrad, 2 * thrOfGrad);
@@ -397,7 +399,6 @@ int main()
 		// If the frame is empty, break immediately
 		if (smallFrame.empty())
 			break;
-		int fltrSz = 3;
 		cv::equalizeHist(smallFrame, smallFrame);
 		blur(smallFrame, smallFrame, Size(fltrSz, fltrSz));
 		Canny(smallFrame, grad8Thr, thrOfGrad, 2 * thrOfGrad);
@@ -489,7 +490,7 @@ int main()
 				sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
 					cntFrameNum, idx, numOfContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mCg.x, cd.mCg.y, cd.mLen, cd.mRatioFromAll);
 				OutputDebugStringA(buf);
-				if (cntFrameNum == 134)// && idx == 2)// && idxFirst == 7)
+				if (cntFrameNum == -133)// && idx == 2)// && idxFirst == 7)
 				{
 					shot.setTo(0);
 					polylines(shot, cdsFrame[idxOfLargeInTheArray].mContour, true, 255, 1, 8);
@@ -521,7 +522,7 @@ int main()
 						//cv::imshow("grad", grad8Thr);
 						//cv::waitKey();
 						//cout << idxFirst << endl;
-						if (cntFrameNum == -134)// && idx == 2)// && idxFirst == 7)
+						if (cntFrameNum == -133)// && idx == 2)// && idxFirst == 7)
 						{
 							shot.setTo(0);
 							polylines(shot, cdsFrame[idxOfLargeInTheArray].mContour, true, 255, 1, 8);
@@ -555,10 +556,10 @@ int main()
 						sprintf_s(buf, "FindShot: New F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
 							cntFrameNum, idx, numOfContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mCg.x, cd.mCg.y, cd.mLen, cd.mRatioFromAll);
 						OutputDebugStringA(buf);						
-						cv::imshow("gradThr", grad8Thr);
-						cv::imshow("Frame", smallFrame);
-						cv::imshow("cntr", shot);
-						cv::waitKey();
+						//cv::imshow("gradThr", grad8Thr);
+						//cv::imshow("Frame", smallFrame);
+						//cv::imshow("cntr", shot);
+						//cv::waitKey();
 						cntrDataFirst.push_back(cd);
 					}
 /*************************/
@@ -568,6 +569,7 @@ int main()
 			/*
 			Find shotsCands in the current frame, if they does not exists, remove them.
 			*/
+			/*
 			for (int idxFirst = 0; idxFirst < (int)shotsCand.size(); idxFirst++)
 			{
 				ContourData cdf = shotsCand[idxFirst];
@@ -591,7 +593,7 @@ int main()
 						(cdToFindShot.mAr >= 3 && cdToFindShot.mShRct.width < 20 && cdToFindShot.mShRct.height < 20 && cdToFindShot.mShRct.width > 4 && cdToFindShot.mShRct.height >= 4 && cdToFindShot.mRatioWh > 0.7))
 					{
 
-						if (cntFrameNum == -128 )//&& /*idx == 2 &&*/ idxFirst == 0)
+						if (cntFrameNum == -128 )//&& idx == 2 && idxFirst == 0)
 						{
 							cout << idxFirst << endl;
 							shot.setTo(0);
@@ -620,7 +622,7 @@ int main()
 						--idxFirst;
 					}
 				}
-			}
+			}*/
 		}
 
 /********/
