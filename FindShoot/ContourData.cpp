@@ -3,6 +3,22 @@
 #include <iostream>
 #include "opencv2/highgui.hpp"
 
+using namespace cv;
+void CalcAverageBorderColor(Mat& grad8Thr, ContourData& cd)
+{
+	if (cd.mLen == 0)
+	{
+		return;
+	}
+	cd.mAvgBorderColor = 0;
+	for (Point p : cd.mContour)
+	{
+		cd.mAvgBorderColor += grad8Thr.at<uchar>(p.y, p.x);
+	}
+	
+	cd.mAvgBorderColor /= cd.mLen;
+}
+
 const float  ContourData::mMatchThr = 0.51f;
 
 void CopyContourData(ContourData& dest, const ContourData& src)
@@ -21,6 +37,7 @@ void CopyContourData(ContourData& dest, const ContourData& src)
 	dest.mCorners = src.mCorners;
 	dest.mDistFromLargeCorners = src.mDistFromLargeCorners;
 	dest.mDistToCenterOfLarge = src.mDistToCenterOfLarge;
+	dest.mAvgBorderColor = src.mAvgBorderColor;
 }
 
 ContourData::ContourData()
@@ -37,6 +54,7 @@ ContourData::ContourData()
 	mCorners.resize(4, Point(0, 0));
 	mDistFromLargeCorners.resize(4, Point(-1, -1));
 	mDistToCenterOfLarge = Point(-1, -1);
+	mAvgBorderColor = -1;
 }
 
 ContourData::ContourData(const ContourData& cdIn)

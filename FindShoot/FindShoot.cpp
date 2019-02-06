@@ -292,8 +292,9 @@ int main()
 	int thrOfGrad = 75;
 	int maxGrayLevelAllowed = 150;
 //#undef min	cv::min(firstFrame, maxGrayLevelAllowed, firstFrame);
-	Canny(firstFrame, firstGrad, thrOfGrad, 2 * thrOfGrad);
+	Canny(firstFrame, firstGrad, thrOfGrad, 3 * thrOfGrad);
 	firstGrad.setTo(0, map);
+	Dilation(firstGrad, firstGrad, 1);
 	cv::imshow("firstFrame", firstFrame);
 	cv::imshow("firstGrad", firstGrad);
 	cv::waitKey();
@@ -403,14 +404,14 @@ int main()
 		blur(smallFrame, smallFrame, Size(fltrSz, fltrSz));
 		Canny(smallFrame, grad8Thr, thrOfGrad, 2 * thrOfGrad);
 		grad8Thr.setTo(0, map);
+		Dilation(grad8Thr, grad8Thr, 1);
 		int x = 0, y = 0;
-		bool isToDisplay = false;
 		//if (cntFrameNum == 738)	isToDisplay = true;
 		Rect movRct(rctMargin);
 
 		vector<vector<Point> > contours;
 		vector<Vec4i> hierarchy;
-		cv::findContours(grad8Thr, contours, RETR_LIST, CHAIN_APPROX_NONE);
+		cv::findContours(grad8Thr, contours, hierarchy,RETR_CCOMP, CHAIN_APPROX_NONE);
 		int cntrSz = (int)contours.size();
 		char buf[256] = { '\0' };
 		sprintf_s(buf, "FindShot: F=%d move x=%d y=%d. Found cntr=%d\n", cntFrameNum,x,y,cntrSz);
@@ -429,6 +430,7 @@ int main()
 			for (; idx < contours.size(); idx++)
 			{
 				ContourData cd(contours[idx], sz);
+				CalcAverageBorderColor(grad8Thr, cd);
 				if (cd.mShRct.width == 0 || cd.mShRct.height == 0)
 					continue;
 				//shot.setTo(0);
@@ -474,9 +476,9 @@ int main()
 			{
 				continue;
 			}
-			//x = pntCgMax.x - pntCgMaxFirst.x;
-			//y = pntCgMax.y - pntCgMaxFirst.y;
 			Point pntMov(x, y);
+			cdsFrame[idxOfLargeInTheArray].mShRct.x += x;
+			cdsFrame[idxOfLargeInTheArray].mShRct.y += y;
 			for (idx=0; idx < (int)cdsFrame.size(); idx++)
 			{
 				cdsFrame[idx].mFrameNum = cntFrameNum;
@@ -556,10 +558,10 @@ int main()
 						sprintf_s(buf, "FindShot: New F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
 							cntFrameNum, idx, numOfContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mCg.x, cd.mCg.y, cd.mLen, cd.mRatioFromAll);
 						OutputDebugStringA(buf);						
-						//cv::imshow("gradThr", grad8Thr);
-						//cv::imshow("Frame", smallFrame);
-						//cv::imshow("cntr", shot);
-						//cv::waitKey();
+						cv::imshow("gradThr", grad8Thr);
+						cv::imshow("Frame", smallFrame);
+						cv::imshow("cntr", shot);
+						cv::waitKey();
 						cntrDataFirst.push_back(cd);
 					}
 /*************************/
@@ -637,7 +639,12 @@ int main()
 		}
 
 		if (numOfShotsFound > 0)
-			rectangle(frameRgb, shotsCand[numOfShotsFound-1].mShRct, Scalar(255, 0, 0), 2);
+		{
+			Rect rct = shotsCand[numOfShotsFound - 1].mShRct;
+			rct.x += x;
+			rct.y += y;
+			rectangle(frameRgb, rct, Scalar(255, 0, 0), 2);
+		}
 		frameRgb.copyTo(frameRgbDisplayed);
 		cv::imshow("SHOTS", frameRgbDisplayed);
 		cv::imshow("firstFrame", firstFrame);

@@ -6,6 +6,7 @@
 
 using namespace cv;
 using namespace std;
+
 class ContourData
 {
 public:
@@ -38,5 +39,8 @@ public:
 	vector<Point> mCorners;
 	vector<Point> mDistFromLargeCorners;
 	Point mDistToCenterOfLarge;
+	float mAvgBorderColor;
 };
+
+void CalcAverageBorderColor(Mat& grad8Thr, ContourData& cd);
 #endif
