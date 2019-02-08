@@ -512,10 +512,10 @@ int main()
 					cv::imshow("cntrIn", shot);
 					cv::waitKey();
 				}
-				if ((cd.mAr > arMax) &&
-					(cd.mAr > 10 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 2 && cd.mShRct.height > 2 && cd.mRatioWh > 0.54) ||
-					(cd.mAr > 25 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 4 && cd.mShRct.height > 4 && cd.mRatioWh > 0.45) ||
-					(cd.mAr >= 3 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 4 && cd.mShRct.height >= 4 && cd.mRatioWh > 0.79))
+				if ((cd.mAr > arMax) && IsItShot(cd))
+					//(cd.mAr > 10 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 2 && cd.mShRct.height > 2 && cd.mRatioWh > 0.54) ||
+					//(cd.mAr > 25 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 4 && cd.mShRct.height > 4 && cd.mRatioWh > 0.45) ||
+					//(cd.mAr >= 3 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 4 && cd.mShRct.height >= 4 && cd.mRatioWh > 0.79))
 				{
 					/*Need to go over the first contours compare its cg and MatchShape and see if this one is new, if yes add it to the list*/
 					

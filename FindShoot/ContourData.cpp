@@ -4,7 +4,7 @@
 #include "opencv2/highgui.hpp"
 
 using namespace cv;
-void CalcAverageBorderColor(Mat& grad8Thr, ContourData& cd)
+void CalcAverageBorderColor(Mat& img, ContourData& cd)
 {
 	if (cd.mLen == 0)
 	{
@@ -13,10 +13,47 @@ void CalcAverageBorderColor(Mat& grad8Thr, ContourData& cd)
 	cd.mAvgBorderColor = 0;
 	for (Point p : cd.mContour)
 	{
-		cd.mAvgBorderColor += grad8Thr.at<uchar>(p.y, p.x);
+		cd.mAvgBorderColor += img.at<uchar>(p.y, p.x);
 	}
 	
 	cd.mAvgBorderColor /= cd.mLen;
+}
+
+void CalcAverageRectInOutColor(Mat& img, ContourData& cd)
+{
+	if (cd.mLen == 0 || cd.mShRct.height<3 || cd.mShRct.width<3)
+	{
+		return;
+	}
+	cd.mAvgOutRctColor = 0;
+	cd.mAvgInRctColor = 0;
+	
+	Rect outRct(cd.mShRct), inRct(cd.mShRct);
+	outRct.x = max(outRct.x - 1, 0);
+	outRct.y = max(outRct.y - 1, 0);
+	if (outRct.x + outRct.width + 1 < img.cols)
+	{
+		++outRct.width;
+	}
+	if (outRct.y + outRct.height + 1 < img.rows)
+	{
+		++outRct.height;
+	}
+	inRct.x += (inRct.width >> 1) - 1;
+	inRct.y += (inRct.height >> 1) - 1;
+	inRct.width = 2;
+	inRct.height = 2;
+	cd.mAvgOutRctColor += img.at<uchar>(outRct.y, outRct.x);
+	cd.mAvgOutRctColor += img.at<uchar>(outRct.y, outRct.x + outRct.width - 1);
+	cd.mAvgOutRctColor += img.at<uchar>(outRct.y + outRct.height - 1, outRct.x + outRct.width - 1);
+	cd.mAvgOutRctColor += img.at<uchar>(outRct.y + outRct.height - 1, outRct.x);
+	cd.mAvgOutRctColor *= 0.25;
+
+	cd.mAvgInRctColor += img.at<uchar>(inRct.y, inRct.x);
+	cd.mAvgInRctColor += img.at<uchar>(inRct.y, inRct.x + 1);
+	cd.mAvgInRctColor += img.at<uchar>(inRct.y + 1, inRct.x + 1);
+	cd.mAvgInRctColor += img.at<uchar>(inRct.y + 1, inRct.x);
+	cd.mAvgInRctColor *= 0.25;
 }
 
 
@@ -39,6 +76,8 @@ void CopyContourData(ContourData& dest, const ContourData& src)
 	dest.mDistFromLargeCorners = src.mDistFromLargeCorners;
 	dest.mDistToCenterOfLarge = src.mDistToCenterOfLarge;
 	dest.mAvgBorderColor = src.mAvgBorderColor;
+	dest.mAvgOutRctColor = src.mAvgOutRctColor;
+	dest.mAvgInRctColor = src.mAvgInRctColor;
 }
 
 ContourData::ContourData()
@@ -56,6 +95,9 @@ ContourData::ContourData()
 	mDistFromLargeCorners.resize(4, Point(-1, -1));
 	mDistToCenterOfLarge = Point(-1, -1);
 	mAvgBorderColor = -1;
+	mAvgOutRctColor = -1;
+	mAvgInRctColor = -1;
+
 }
 
 ContourData::ContourData(const ContourData& cdIn)

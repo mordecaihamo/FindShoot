@@ -40,6 +40,8 @@ public:
 	vector<Point> mDistFromLargeCorners;
 	Point mDistToCenterOfLarge;
 	float mAvgBorderColor;
+	float mAvgOutRctColor;
+	float mAvgInRctColor;
 };
 
 void CalcAverageBorderColor(Mat& grad8Thr, ContourData& cd);

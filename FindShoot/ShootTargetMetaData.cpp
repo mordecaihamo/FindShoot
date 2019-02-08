@@ -3,6 +3,16 @@
 #include "opencv2/imgproc.hpp"
 #include <fstream>
 
+bool IsItShot(ContourData cd)
+{
+	bool res = false;
+	if (cd.mAvgOutRctColor - cd.mAvgInRctColor > 15 && cd.mAvgInRctColor < 200)
+	{
+		res = true;
+	}
+	return res;
+}
+
 void drawPolyRect(cv::Mat& img, const Point* p, Scalar color, int lineWd)
 {
 	if (lineWd > 0)

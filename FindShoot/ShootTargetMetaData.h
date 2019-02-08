@@ -2,11 +2,13 @@
 #ifndef _SHOOTTARGETMETADATA
 #define	_SHOOTTARGETMETADATA
 #include "opencv2/core.hpp"
+#include "ContourData.h"
 
 using namespace cv;
 using namespace std;
 
 void drawPolyRect(cv::Mat& img, const Point* p,Scalar color, int lineWd);
+bool IsItShot(ContourData cd);
 
 class ShootTargetMetaData
 {

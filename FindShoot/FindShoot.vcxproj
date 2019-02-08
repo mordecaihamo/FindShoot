@@ -173,7 +173,6 @@
     <ClInclude Include="ContourData.h" />
     <ClInclude Include="MovmentUtils.h" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="ShootingLocations.h" />
     <ClInclude Include="ShootTargetMetaData.h" />
   </ItemGroup>
   <ItemGroup>
@@ -185,7 +184,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="ShootingLocations.cpp" />
     <ClCompile Include="ShootTargetMetaData.cpp" />
     <ClCompile Include="MovmentUtils.cpp" />
   </ItemGroup>
