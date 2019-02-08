@@ -19,6 +19,7 @@ void CalcAverageBorderColor(Mat& grad8Thr, ContourData& cd)
 	cd.mAvgBorderColor /= cd.mLen;
 }
 
+
 const float  ContourData::mMatchThr = 0.51f;
 
 void CopyContourData(ContourData& dest, const ContourData& src)
@@ -177,7 +178,7 @@ bool ContourData::operator ==(const ContourData& cdIn)
 	//	return res;
 	int m = 0, o = 0;
 	int numOfFoundPix = 0;
-	int minDis = 2;
+	int minDis = 3;
 	int xMov = mDistToCenterOfLarge.x - cdIn.mDistToCenterOfLarge.x;
 	int yMov = mDistToCenterOfLarge.y - cdIn.mDistToCenterOfLarge.y;
 	for (; m < mLen; ++m)
