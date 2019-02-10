@@ -420,7 +420,6 @@ int main()
 		}
 		int x = 0, y = 0;
 		//if (cntFrameNum == 738)	isToDisplay = true;
-		Rect movRct(rctMargin);
 
 		vector<vector<Point> > contours;
 		vector<Vec4i> hierarchy;
@@ -496,8 +495,8 @@ int main()
 				continue;
 			}
 			Point pntMov(x, y);
-			cdsFrame[idxOfLargeInTheArray].mShRct.x += x;
-			cdsFrame[idxOfLargeInTheArray].mShRct.y += y;
+			cdsFrame[idxOfLargeInTheArray].mShRct.x -= x;
+			cdsFrame[idxOfLargeInTheArray].mShRct.y -= y;
 			for (idx=0; idx < (int)cdsFrame.size(); idx++)
 			{
 				cdsFrame[idx].mFrameNum = cntFrameNum;
@@ -557,9 +556,31 @@ int main()
 							cv::imshow("cntrIn", shot);
 							cv::waitKey();
 						}
-					
-						if (cd==cdf)
+
+						ContourData cdResidu;
+						if (cd.CompareContourAndReturnResidu(cdf, cdResidu)==true)//returns true if equal
 						{
+							if (cdResidu.mLen > 10)
+							{
+								cdResidu.SetDistFromLargeCenter(pntCgMax);
+								CalcAverageRectInOutColor(smallFrame, cdResidu);
+								cdsFrame.push_back(cdResidu);
+							
+							//if (abs(x) > 2 || abs(y) > 2)
+							//{
+								shot.setTo(0);
+								ContourData cdTemp(cd - pntMov);
+								//polylines(shot, cdsFrame[idxOfLargeInTheArray].mContour, true, 255, 1, 8);
+								//polylines(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mContour, true, 128, 1, 8);
+								polylines(shot, cdTemp.mContour, true, 255, 1, 8);
+								polylines(shot, cdf.mContour, true, 128, 1, 8);
+								polylines(shot, cdResidu.mContour, true, 200, 1, 8);
+								//circle(shot, cdsFrame[idxOfLargeInTheArray].mCg, 3, 255);
+								//circle(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mCg, 3, 128);
+								cv::imshow("gradThr", grad8Thr);
+								cv::imshow("cntrAndCntrIn", shot);
+								cv::waitKey();
+							}
 							isFound = true;
 							//cntrDataFirst.push_back(cd + pntMov);
 							break;

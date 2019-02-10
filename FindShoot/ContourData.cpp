@@ -85,7 +85,7 @@ void CopyContourData(ContourData& dest, const ContourData& src)
 	dest.mAvgInRctColor = src.mAvgInRctColor;
 }
 
-ContourData::ContourData()
+ContourData::ContourData(void)
 {
 	mAr = 0.0f;
 	mShRct.x = 0;
@@ -241,6 +241,80 @@ bool ContourData::operator ==(const ContourData& cdIn)
 			}
 		}
 	}
+	float matchRatio = (float)numOfFoundPix / (float)mLen;
+	float matchRatioToIn = (float)numOfFoundPix / (float)cdIn.mLen;
+	matchRatio = max(matchRatio, matchRatioToIn);
+	if (numOfFoundPix >= cdIn.mLen)
+	{
+		matchRatio = 1.0f;
+	}
+	//double matchRes = matchShapes(mContour, cdIn.mContour, ShapeMatchModes::CONTOURS_MATCH_I2,0);
+	//if (prnt) cout << matchRes << endl;
+	//if (matchRes > mMatchThr)
+	//	return res;
+	//else
+	//	res = true;
+	//if (mFrameNum==93 && mIdxCntr==6 && cdIn.mIdxCntr==7)		prnt = true;
+	if (prnt)
+	{
+		Mat plineCmp(mPicSize, CV_8UC1);
+		plineCmp.setTo(0);
+		polylines(plineCmp, cdIn.mContour, true, 255, 1, 8);
+		polylines(plineCmp, mContour, true, 128, 1, 8);
+		cv::imshow("plineCmp", plineCmp);
+		cv::waitKey();
+	}
+	if (matchRatio < mMatchThr)
+		return res;
+	else
+	{
+		res = true;
+	}
+	return res;
+}
+
+bool ContourData::CompareContourAndReturnResidu(const ContourData& cdIn, ContourData& cdResidu)
+{
+	bool prnt = false;
+	bool res = false;
+	if (prnt) cout << "(" << mCg.x << "," << mCg.y << ")" << " (" << cdIn.mCg.x << "," << cdIn.mCg.y << ")" << endl;
+	float dx = abs(cdIn.mCg.x - mCg.x);
+	float dy = abs(cdIn.mCg.y - mCg.y);
+	if (prnt) cout << "(" << dx << "," << dy << ")" << endl;
+
+	int m = 0, o = 0;
+	int numOfFoundPix = 0;
+	int minDis = 3;
+	int xMov = mDistToCenterOfLarge.x - cdIn.mDistToCenterOfLarge.x;
+	int yMov = mDistToCenterOfLarge.y - cdIn.mDistToCenterOfLarge.y;
+	bool isFound = false;
+	vector<Point> cntr;
+	for (; m < mLen; ++m)
+	{
+		isFound = false;
+		for (o = 0; o < cdIn.mLen; ++o)
+		{
+			int dxP = abs((mContour[m].x - xMov) - (cdIn.mContour[o].x));
+			int dyP = abs((mContour[m].y - yMov) - (cdIn.mContour[o].y));
+			if (dxP < minDis && dyP < minDis)
+			{
+				++numOfFoundPix;
+				isFound = true;
+				break;
+			}
+		}
+		if (!isFound)
+		{
+			cntr.push_back(mContour[m]);
+		}
+	}
+	int len = (int)cntr.size();
+	if (len > 10)
+	{
+		ContourData cdTmp(cntr, mPicSize, mFrameNum, mIdxCntr);
+		cdResidu = cdTmp;
+	}
+
 	float matchRatio = (float)numOfFoundPix / (float)mLen;
 	float matchRatioToIn = (float)numOfFoundPix / (float)cdIn.mLen;
 	matchRatio = max(matchRatio, matchRatioToIn);

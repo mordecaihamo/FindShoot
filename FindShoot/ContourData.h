@@ -10,14 +10,15 @@ using namespace std;
 class ContourData
 {
 public:
-	ContourData();
+	ContourData(void);
 	~ContourData();
 	ContourData(const ContourData& cdIn);
 	ContourData(const vector<Point>& cntr, Size sz);
-	ContourData(const vector<Point>& cntr, Size sz,int frameNum, int idx);
+	ContourData(const vector<Point>& cntr, Size sz, int frameNum, int idx);
 	ContourData(const vector<Point>& cntr, Size sz, int frameNum, int idx, vector<Point> cornersOfLarge);
 	ContourData* operator =(const ContourData& cdIn);
 	bool operator ==(const ContourData& cdIn);
+	bool CompareContourAndReturnResidu(const ContourData& cdIn, ContourData& cdResidu);
 	ContourData operator +(const Point p);
 	ContourData operator -(const Point p);
 	void SetDistFromLargeCorners(const vector<Point>& cornersOfLarge);
