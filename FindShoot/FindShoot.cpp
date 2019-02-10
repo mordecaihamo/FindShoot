@@ -294,7 +294,13 @@ int main()
 //#undef min	cv::min(firstFrame, maxGrayLevelAllowed, firstFrame);
 	Canny(firstFrame, firstGrad, thrOfGrad, 3 * thrOfGrad);
 	firstGrad.setTo(0, map);
-	//Dilation(firstGrad, firstGrad, 1);
+	bool isWithDilate = true;
+	if (isWithDilate)
+	{
+		Dilation(firstGrad, firstGrad, 1);
+		Erosion(firstGrad, firstGrad, 1);
+	}
+	
 	cv::imshow("firstFrame", firstFrame);
 	cv::imshow("firstGrad", firstGrad);
 	cv::waitKey();
@@ -407,7 +413,11 @@ int main()
 		blur(smallFrame, smallFrame, Size(fltrSz, fltrSz));
 		Canny(smallFrame, grad8Thr, thrOfGrad, 2 * thrOfGrad);
 		grad8Thr.setTo(0, map);
-		//Dilation(grad8Thr, grad8Thr, 1);
+		if (isWithDilate)
+		{
+			Dilation(grad8Thr, grad8Thr, 1);
+			Erosion(grad8Thr, grad8Thr, 1);
+		}
 		int x = 0, y = 0;
 		//if (cntFrameNum == 738)	isToDisplay = true;
 		Rect movRct(rctMargin);
@@ -494,6 +504,7 @@ int main()
 				cdsFrame[idx].mIdxCntr = idx;
 				cdsFrame[idx].SetDistFromLargeCenter(pntCgMax);
 				ContourData cd = cdsFrame[idx];
+				CalcAverageRectInOutColor(smallFrame, cd);
 				if (cd.mShRct.width == 0 || cd.mShRct.height == 0)
 					continue;
 

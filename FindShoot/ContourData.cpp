@@ -39,17 +39,22 @@ void CalcAverageRectInOutColor(Mat& img, ContourData& cd)
 	{
 		++outRct.height;
 	}
-	inRct.x += (inRct.width >> 1) - 1;
-	inRct.y += (inRct.height >> 1) - 1;
-	inRct.width = 2;
-	inRct.height = 2;
 	cd.mAvgOutRctColor += img.at<uchar>(outRct.y, outRct.x);
 	cd.mAvgOutRctColor += img.at<uchar>(outRct.y, outRct.x + outRct.width - 1);
 	cd.mAvgOutRctColor += img.at<uchar>(outRct.y + outRct.height - 1, outRct.x + outRct.width - 1);
 	cd.mAvgOutRctColor += img.at<uchar>(outRct.y + outRct.height - 1, outRct.x);
 	cd.mAvgOutRctColor *= 0.25;
 
-	cd.mAvgInRctColor += img.at<uchar>(inRct.y, inRct.x);
+	double mn, mx;
+	Point mnLoc, mxLoc;
+	Mat imgInRct = img(inRct);
+	minMaxLoc(imgInRct, &mn, &mx, &mnLoc, &mxLoc);
+	inRct.x += mnLoc.x;
+	inRct.y += mnLoc.y;
+	inRct.width = 2;
+	inRct.height = 2;
+
+	cd.mAvgInRctColor += mn;// img.at<uchar>(inRct.y, inRct.x);
 	cd.mAvgInRctColor += img.at<uchar>(inRct.y, inRct.x + 1);
 	cd.mAvgInRctColor += img.at<uchar>(inRct.y + 1, inRct.x + 1);
 	cd.mAvgInRctColor += img.at<uchar>(inRct.y + 1, inRct.x);

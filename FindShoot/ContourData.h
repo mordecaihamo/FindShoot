@@ -45,4 +45,5 @@ public:
 };
 
 void CalcAverageBorderColor(Mat& grad8Thr, ContourData& cd);
+void CalcAverageRectInOutColor(Mat& img, ContourData& cd);
 #endif
