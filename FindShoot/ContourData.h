@@ -18,7 +18,7 @@ public:
 	ContourData(const vector<Point>& cntr, Size sz, int frameNum, int idx, vector<Point> cornersOfLarge);
 	ContourData* operator =(const ContourData& cdIn);
 	bool operator ==(const ContourData& cdIn);
-	bool CompareContourAndReturnResidu(const ContourData& cdIn, ContourData& cdResidu);
+	bool CompareContourAndReturnResidu(const ContourData& cdIn, vector<ContourData>& cdsResidu);
 	ContourData operator +(const Point p);
 	ContourData operator -(const Point p);
 	void SetDistFromLargeCorners(const vector<Point>& cornersOfLarge);

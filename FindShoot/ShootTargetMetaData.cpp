@@ -6,9 +6,12 @@
 bool IsItShot(ContourData cd)
 {
 	bool res = false;
-	if (cd.mAvgOutRctColor - cd.mAvgInRctColor > 15 && cd.mAvgInRctColor < 200)
+	if (cd.mAvgOutRctColor - cd.mAvgInRctColor > 15 && cd.mAvgInRctColor < 200 && cd.mRatioWh > 0.25)
 	{
-		res = true;
+		//if(	(cd.mAr > 10 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 2 && cd.mShRct.height > 2 && cd.mRatioWh > 0.54) /*||
+		//	(cd.mAr > 25 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 4 && cd.mShRct.height > 4 && cd.mRatioWh > 0.45) ||
+		//	(cd.mAr >= 3 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 4 && cd.mShRct.height >= 4 && cd.mRatioWh > 0.79)*/)
+			res = true;
 	}
 	return res;
 }

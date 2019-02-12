@@ -48,6 +48,10 @@ void CalcAverageRectInOutColor(Mat& img, ContourData& cd)
 	double mn, mx;
 	Point mnLoc, mxLoc;
 	Mat imgInRct = img(inRct);
+	inRct.x = min(outRct.x + 1, img.cols - 1);
+	inRct.y = min(outRct.y + 1, img.rows - 1);
+	inRct.width = inRct.width - 1;
+	inRct.height = inRct.height - 1;
 	minMaxLoc(imgInRct, &mn, &mx, &mnLoc, &mxLoc);
 	inRct.x += mnLoc.x;
 	inRct.y += mnLoc.y;
@@ -273,7 +277,7 @@ bool ContourData::operator ==(const ContourData& cdIn)
 	return res;
 }
 
-bool ContourData::CompareContourAndReturnResidu(const ContourData& cdIn, ContourData& cdResidu)
+bool ContourData::CompareContourAndReturnResidu(const ContourData& cdIn, vector<ContourData>& cdsResidu)
 {
 	bool prnt = false;
 	bool res = false;
@@ -309,11 +313,8 @@ bool ContourData::CompareContourAndReturnResidu(const ContourData& cdIn, Contour
 		}
 	}
 	int len = (int)cntr.size();
-	if (len > 10)
-	{
-		ContourData cdTmp(cntr, mPicSize, mFrameNum, mIdxCntr);
-		cdResidu = cdTmp;
-	}
+	int numOfCntrs = 1;
+	int minDisBetweenGroups = 10;
 
 	float matchRatio = (float)numOfFoundPix / (float)mLen;
 	float matchRatioToIn = (float)numOfFoundPix / (float)cdIn.mLen;
@@ -342,6 +343,42 @@ bool ContourData::CompareContourAndReturnResidu(const ContourData& cdIn, Contour
 		return res;
 	else
 	{
+		//seperate the points in cntr to groups of contours
+		if (len > 10)
+		{
+			vector<vector<Point>> cntrTmp(len);
+			cntrTmp[0].push_back(cntr[0]);
+			for (int p = 1; p < len; ++p)
+			{
+				bool isFound = false;
+				for (int c = 0; c < numOfCntrs; ++c)
+				{
+					int curLen = (int)cntrTmp[c].size();
+					int dx = abs(cntr[p].x - cntrTmp[c][curLen - 1].x);
+					int dy = abs(cntr[p].y - cntrTmp[c][curLen - 1].y);
+					if (dx < minDisBetweenGroups && dy < minDisBetweenGroups)
+					{
+						isFound = true;
+						cntrTmp[c].push_back(cntr[p]);
+						break;
+					}
+				}
+				if (!isFound)//Not found close point, establish new contour
+				{
+					cntrTmp[numOfCntrs].push_back(cntr[p]);
+					++numOfCntrs;
+				}
+			}
+			for (int c = 0; c < numOfCntrs; ++c)
+			{
+				if (cntrTmp[c].size() > 10)
+				{
+					ContourData cdTmp(cntrTmp[c], mPicSize, mFrameNum, mIdxCntr);
+					cdsResidu.push_back(cdTmp);
+				}
+			}
+		}
+
 		res = true;
 	}
 	return res;
