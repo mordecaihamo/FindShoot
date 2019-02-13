@@ -391,8 +391,7 @@ int main()
 
 		if (frame.size().height == 0)
 			break;
-		//if (cntFrameNum % 10 != 0)
-		//	continue;
+		if (cntFrameNum < 1475) continue;
 		
 		resize(frame, frameRgb, sz);
 		cvtColor(frame, frame, COLOR_BGR2GRAY);
@@ -486,16 +485,20 @@ int main()
 			}
 			/*This is the movment between the frames*/
 			//pntCgMax = cdsFrame[idxOfLargeInTheArray].mCg;
-			x = cdsFrame[idxOfLargeInTheArray].mShRct.x - cntrDataFirst[idxOfLargeInTheFirstArray].mShRct.x;
-			y = cdsFrame[idxOfLargeInTheArray].mShRct.y - cntrDataFirst[idxOfLargeInTheFirstArray].mShRct.y;
+			//x = cdsFrame[idxOfLargeInTheArray].mShRct.x - cntrDataFirst[idxOfLargeInTheFirstArray].mShRct.x;
+			//y = cdsFrame[idxOfLargeInTheArray].mShRct.y - cntrDataFirst[idxOfLargeInTheFirstArray].mShRct.y;
+			x = (int)round(cdsFrame[idxOfLargeInTheArray].mCorners[0].x - cntrDataFirst[idxOfLargeInTheFirstArray].mCorners[0].x);
+			y = (int)round(cdsFrame[idxOfLargeInTheArray].mCorners[0].y - cntrDataFirst[idxOfLargeInTheFirstArray].mCorners[0].y);
+
 			if (abs(x) > 10 || abs(y) > 10)
 			{
 				cout << "Skipping" << endl;
 				continue;
 			}
 			Point pntMov(x, y);
-			cdsFrame[idxOfLargeInTheArray].mShRct.x -= x;
-			cdsFrame[idxOfLargeInTheArray].mShRct.y -= y;
+			//cdsFrame[idxOfLargeInTheArray].mShRct.x -= x;
+			//cdsFrame[idxOfLargeInTheArray].mShRct.y -= y;
+			cdsFrame[idxOfLargeInTheArray] = cdsFrame[idxOfLargeInTheArray] - pntMov;
 			for (idx=0; idx < (int)cdsFrame.size(); idx++)
 			{
 				cdsFrame[idx].mFrameNum = cntFrameNum;
@@ -510,15 +513,18 @@ int main()
 				sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
 					cntFrameNum, idx, numOfContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mCg.x, cd.mCg.y, cd.mLen, cd.mRatioFromAll);
 				OutputDebugStringA(buf);
-				if (cntFrameNum == -781)// && idx == 2)// && idxFirst == 7)
+				if (cntFrameNum == -1475)// && idx == 2)// && idxFirst == 7)
 				{
 					shot.setTo(0);
-					polylines(shot, cdsFrame[idxOfLargeInTheArray].mContour, true, 255, 1, 8);
-					polylines(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mContour, true, 128, 1, 8);
+					cv::rectangle(shot, cdsFrame[idxOfLargeInTheArray].mShRct, 255);
+					cv::rectangle(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mShRct, 128);
+					polylines(shot, cdsFrame[idxOfLargeInTheArray].mContour, true, 200, 1, 8);
+					polylines(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mContour, true, 80, 1, 8);
 					polylines(shot, cd.mContour, true, 255, 1, 8);
 					circle(shot, cdsFrame[idxOfLargeInTheArray].mCg, 3, 255);
 					circle(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mCg, 3, 128);
 					cv::imshow("cntrIn", shot);
+					cv::imshow("Frame", smallFrame);
 					cv::waitKey();
 				}
 				if ((cd.mAr > arMax) && IsItShot(cd))
@@ -562,10 +568,11 @@ int main()
 								{
 									if (cdsResidu[cdResIdx].mLen > 10 && cdsResidu[cdResIdx].mLen<cdf.mLen && cdsResidu[cdResIdx].mLen<cd.mLen)
 									{
-										cdsResidu[cdResIdx].SetDistFromLargeCenter(pntCgMax);
-										CalcAverageRectInOutColor(smallFrame, cdsResidu[cdResIdx]);
+
 										if (IsItShot(cdsResidu[cdResIdx]))
 										{
+											cdsResidu[cdResIdx].SetDistFromLargeCenter(pntCgMax);
+											CalcAverageRectInOutColor(smallFrame, cdsResidu[cdResIdx]);
 											shot.setTo(0);
 											Mat s1, s2, s3;
 											shot.copyTo(s1); shot.copyTo(s2); shot.copyTo(s3);

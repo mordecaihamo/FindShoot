@@ -139,6 +139,7 @@ ContourData::ContourData(const vector<Point>& cntr, Size sz):ContourData()
 		if (p.y > b.y)
 			b = p;
 	}
+
 	if (l.x <= t.x)
 	{
 		mCorners[0] = l;//tl
@@ -153,8 +154,6 @@ ContourData::ContourData(const vector<Point>& cntr, Size sz):ContourData()
 		mCorners[2] = b;
 		mCorners[3] = l;
 	}
-	mCg.x = mShRct.x + 0.5*mShRct.width;
-	mCg.y = mShRct.y + 0.5*mShRct.height;
 	//for (Point p : mCorners)
 	//{
 	//	mCg.x += p.x;
