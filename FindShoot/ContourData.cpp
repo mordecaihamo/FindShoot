@@ -89,6 +89,22 @@ void CopyContourData(ContourData& dest, const ContourData& src)
 	dest.mAvgInRctColor = src.mAvgInRctColor;
 }
 
+double AucDisSqr(const cv::Point& p1, const cv::Point& p2)
+{
+	double dx, dy;
+	dx = p1.x - p2.x;
+	dy = p1.y - p2.y;
+	return dx * dx + dy * dy;
+}
+
+double AucDis(const cv::Point& p1, const cv::Point& p2)
+{
+	double dis = AucDisSqr(p1, p2);
+	if (dis >= 0)
+		dis = sqrt(dis);
+	return dis;
+}
+
 ContourData::ContourData(void)
 {
 	mAr = 0.0f;
@@ -169,7 +185,7 @@ ContourData::ContourData(const vector<Point>& cntr, Size sz, int frameNum, int i
 	mIdxCntr = idx;
 }
 
-ContourData::ContourData(const vector<Point>& cntr, Size sz, int frameNum, int idx, vector<Point> cornersOfLarge)
+ContourData::ContourData(const vector<Point>& cntr, Size sz, int frameNum, int idx, vector<Point> cornersOfLarge) :ContourData(cntr, sz, frameNum, idx)
 {
 	ContourData(cntr, sz,frameNum,idx);
 	SetDistFromLargeCorners(cornersOfLarge);
@@ -189,29 +205,30 @@ ContourData* ContourData::operator =(const ContourData& cdIn)
 ContourData ContourData::operator +(const Point p)
 {
 	ContourData cdOut = *this;
-	cdOut.mShRct.x += p.x;
-	cdOut.mShRct.y += p.y;
-	cdOut.mCg.x += p.x;
-	cdOut.mCg.y += p.y;
+	cdOut.mShRct.x = min(mPicSize.width - 1, cdOut.mShRct.x + p.x);
+	cdOut.mShRct.y = min(mPicSize.height - 1, cdOut.mShRct.y + p.y);
+	cdOut.mCg.x = min(mPicSize.width - 1.0f, cdOut.mCg.x + p.x);
+	cdOut.mCg.y = min(mPicSize.height - 1.0f, cdOut.mCg.y + p.y);
 	for (int i = 0; i < cdOut.mContour.size(); ++i)
 	{
-		cdOut.mContour[i].x += p.x;
-		cdOut.mContour[i].y += p.y;
+		cdOut.mContour[i].x = min(mPicSize.width - 1, cdOut.mContour[i].x + p.x);
+		cdOut.mContour[i].y = min(mPicSize.height - 1, cdOut.mContour[i].y + p.y);
 	}
+
 	return cdOut;
 }
 
 ContourData ContourData::operator -(const Point p)
 {
 	ContourData cdOut = *this;
-	cdOut.mShRct.x -= p.x;
-	cdOut.mShRct.y -= p.y;
-	cdOut.mCg.x -= p.x;
-	cdOut.mCg.y -= p.y;
+	cdOut.mShRct.x = max(0, cdOut.mShRct.x - p.x);
+	cdOut.mShRct.y = max(0, cdOut.mShRct.y - p.y);
+	cdOut.mCg.x = max(0.0f, cdOut.mCg.x - p.x);
+	cdOut.mCg.y = max(0.0f, cdOut.mCg.y - p.y);
 	for (int i = 0; i < cdOut.mContour.size(); ++i)
 	{
-		cdOut.mContour[i].x -= p.x;
-		cdOut.mContour[i].y -= p.y;
+		cdOut.mContour[i].x = max(0, cdOut.mContour[i].x - p.x);
+		cdOut.mContour[i].y = max(0, cdOut.mContour[i].y - p.y);
 	}
 	return cdOut;
 }
@@ -274,6 +291,43 @@ bool ContourData::operator ==(const ContourData& cdIn)
 		res = true;
 	}
 	return res;
+}
+
+vector<Point> ContourData::FixSlightlyOpenContour()
+{
+	vector<Point> rpt;
+	
+	int midLoc = mLen >> 1;
+	int qrtLoc = mLen >> 2;
+	int disToMidContour2 = AucDisSqr(mContour[0], mContour[midLoc]);
+	int disToQrtContour2 = AucDisSqr(mContour[0], mContour[qrtLoc]); 
+	if (disToMidContour2 < disToQrtContour2)
+	{
+		int oneThirdLoc = (int)round(mLen / 3.0);
+		int twoThirdLoc = 2 * oneThirdLoc;
+		int minDisLoc = -1;
+		double minDisToStart = DBL_MAX;
+
+		for (int i = oneThirdLoc; i < twoThirdLoc; ++i)
+		{
+			double d = AucDisSqr(mContour[0], mContour[i]);
+			if (d < minDisToStart)
+			{
+				minDisToStart = d;
+				minDisLoc = i;
+			}
+		}
+		if (minDisLoc > 0 && minDisLoc<mLen-1)
+		{
+			rpt = mContour;
+			mContour.erase(mContour.begin() + minDisLoc + 1, mContour.end() - 1);
+			rpt.erase(rpt.begin(), rpt.begin() + minDisLoc);
+			ContourData cd(mContour, mPicSize, mFrameNum, mIdxCntr);
+			*this = cd;
+		}
+	}
+
+	return rpt;
 }
 
 bool ContourData::CompareContourAndReturnResidu(const ContourData& cdIn, vector<ContourData>& cdsResidu)

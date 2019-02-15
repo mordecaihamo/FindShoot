@@ -391,7 +391,7 @@ int main()
 
 		if (frame.size().height == 0)
 			break;
-		if (cntFrameNum < 1475) continue;
+		//if (cntFrameNum < 1475) continue;
 		
 		resize(frame, frameRgb, sz);
 		cvtColor(frame, frame, COLOR_BGR2GRAY);
@@ -442,7 +442,7 @@ int main()
 			while(idx>=0)
 			{
 				ContourData cd(contours[idx], sz);
-				CalcAverageBorderColor(grad8Thr, cd);
+				CalcAverageBorderColor(smallFrame, cd);
 				if (cd.mShRct.width == 0 || cd.mShRct.height == 0)
 					continue;
 				//shot.setTo(0);
@@ -482,6 +482,15 @@ int main()
 				//cv::imshow("skipping", frameRgb);
 				//cv::waitKey();
 				continue;
+			}
+			//If the contour is repeating itself from the inside, return the inside contour
+			vector<Point> rpt = cdsFrame[idxOfLargeInTheArray].FixSlightlyOpenContour();
+			if ((int)rpt.size() > 0)
+			{
+				cdsFrame.push_back(ContourData(	rpt, 
+												cdsFrame[idxOfLargeInTheArray].mPicSize, 
+												cdsFrame[idxOfLargeInTheArray].mFrameNum, 
+												(int)cdsFrame.size()));
 			}
 			/*This is the movment between the frames*/
 			//pntCgMax = cdsFrame[idxOfLargeInTheArray].mCg;
@@ -568,32 +577,31 @@ int main()
 								{
 									if (cdsResidu[cdResIdx].mLen > 10 && cdsResidu[cdResIdx].mLen<cdf.mLen && cdsResidu[cdResIdx].mLen<cd.mLen)
 									{
-
+										cdsResidu[cdResIdx].SetDistFromLargeCenter(pntCgMax);
+										CalcAverageRectInOutColor(smallFrame, cdsResidu[cdResIdx]);
 										if (IsItShot(cdsResidu[cdResIdx]))
 										{
-											cdsResidu[cdResIdx].SetDistFromLargeCenter(pntCgMax);
-											CalcAverageRectInOutColor(smallFrame, cdsResidu[cdResIdx]);
-											shot.setTo(0);
-											Mat s1, s2, s3;
-											shot.copyTo(s1); shot.copyTo(s2); shot.copyTo(s3);
-											ContourData cdTemp(cd - pntMov);
-											//polylines(shot, cdsFrame[idxOfLargeInTheArray].mContour, true, 255, 1, 8);
-											//polylines(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mContour, true, 128, 1, 8);
-											polylines(shot, cdTemp.mContour, true, 255, 1, 8);
-											polylines(shot, cdf.mContour, true, 128, 1, 8);
-											polylines(shot, cdsResidu[cdResIdx].mContour, true, 200, 1, 8);
-											polylines(s1, cdTemp.mContour, true, 255, 1, 8);
-											polylines(s2, cdf.mContour, true, 128, 1, 8);
-											polylines(s3, cdsResidu[cdResIdx].mContour, true, 200, 1, 8);
+											//shot.setTo(0);
+											//Mat s1, s2, s3;
+											//shot.copyTo(s1); shot.copyTo(s2); shot.copyTo(s3);
+											//ContourData cdTemp(cd - pntMov);
+											////polylines(shot, cdsFrame[idxOfLargeInTheArray].mContour, true, 255, 1, 8);
+											////polylines(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mContour, true, 128, 1, 8);
+											//polylines(shot, cdTemp.mContour, true, 255, 1, 8);
+											//polylines(shot, cdf.mContour, true, 128, 1, 8);
+											//polylines(shot, cdsResidu[cdResIdx].mContour, true, 200, 1, 8);
+											//polylines(s1, cdTemp.mContour, true, 255, 1, 8);
+											//polylines(s2, cdf.mContour, true, 128, 1, 8);
+											//polylines(s3, cdsResidu[cdResIdx].mContour, true, 200, 1, 8);
 
-											//circle(shot, cdsFrame[idxOfLargeInTheArray].mCg, 3, 255);
-											//circle(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mCg, 3, 128);
-											cv::imshow("gradThr", grad8Thr);
-											cv::imshow("cntrAndCntrIn", shot);
-											cv::imshow("s1", s1);
-											cv::imshow("s2", s2);
-											cv::imshow("s3", s3);
-											cv::waitKey();
+											////circle(shot, cdsFrame[idxOfLargeInTheArray].mCg, 3, 255);
+											////circle(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mCg, 3, 128);
+											//cv::imshow("gradThr", grad8Thr);
+											//cv::imshow("cntrAndCntrIn", shot);
+											//cv::imshow("s1", s1);
+											//cv::imshow("s2", s2);
+											//cv::imshow("s3", s3);
+											//cv::waitKey();
 											cdsFrame.push_back(cdsResidu[cdResIdx]);
 										}
 									}
@@ -604,7 +612,7 @@ int main()
 							break;
 						}
 					}
-					if (!isFound)
+					if (!isFound && cd.mLen<200)
 					{						
 						cd = cd + pntMov;
 						shotsCand.push_back(cd);

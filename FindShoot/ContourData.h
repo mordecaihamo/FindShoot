@@ -18,6 +18,7 @@ public:
 	ContourData(const vector<Point>& cntr, Size sz, int frameNum, int idx, vector<Point> cornersOfLarge);
 	ContourData* operator =(const ContourData& cdIn);
 	bool operator ==(const ContourData& cdIn);
+	vector<Point> FixSlightlyOpenContour();
 	bool CompareContourAndReturnResidu(const ContourData& cdIn, vector<ContourData>& cdsResidu);
 	ContourData operator +(const Point p);
 	ContourData operator -(const Point p);
