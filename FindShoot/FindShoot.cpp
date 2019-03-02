@@ -289,6 +289,7 @@ int main()
 	Mat mapMar(map, rctMargin);
 	Mat targetMar(target, rctMargin);
 	int thrOfGrad = 70;
+	double thr = 128 + 7;
 	int maxGrayLevelAllowed = 150;
 //#undef min	cv::min(firstFrame, maxGrayLevelAllowed, firstFrame);
 	Canny(firstFrame, firstGrad, thrOfGrad, 3 * thrOfGrad);
@@ -367,7 +368,7 @@ int main()
 		cntrDataFirst[i].SetDistFromLargeCenter(cntrDataFirst[idxOfLargeInTheFirstArray].mCg);
 	}
 
-	Mat grad8Thr;
+	Mat grad8Thr, matAdpt(sz.height, sz.width, CV_8UC1);
 	Mat firstGradMar, grag8ThrMar;
 	firstGradMar = firstGrad(rctMargin);
 	Mat frameRgb;
@@ -378,38 +379,58 @@ int main()
 	vector<Scalar> colors;
 	vector<ContourData> shotsCand;
 	bool isToBreak = false;
+	bool isToSave = false;
+	bool isFromFile = true;
 	int sumX = 0, sumY = 0;
 	while(1)
 	{		
-		shotsCand.resize(0);
-		// Capture frame-by-frame
-		cap >> frame;		
-		cntFrameNum++;
-		cout << cntFrameNum<<endl;
-		//auto res=cap.retrieve(frame, cntFrameNum);
-		//cntFrameNum += 10;
-
-		if (frame.size().height == 0)
-			break;
-		//if (cntFrameNum < 1475) continue;
-		
-		resize(frame, frameRgb, sz);
-		cvtColor(frame, frame, COLOR_BGR2GRAY);
-		smallFrame.copyTo(prevFrame);
-		resize(frame, smallFrame, sz);
-		if (rot != 0)
+		if (!isFromFile)
 		{
-			transpose(smallFrame, smallFrame);
+			shotsCand.resize(0);
+			// Capture frame-by-frame
+			cap >> frame;
+			cntFrameNum++;
+			cout << cntFrameNum << endl;
+			//auto res=cap.retrieve(frame, cntFrameNum);
+			//cntFrameNum += 10;
+
+			if (frame.size().height == 0)
+				break;
+			//if (cntFrameNum < 1475) continue;
+
+			resize(frame, frameRgb, sz);
+			cvtColor(frame, frame, COLOR_BGR2GRAY);
+			smallFrame.copyTo(prevFrame);
+			resize(frame, smallFrame, sz);
+			if (rot != 0)
+			{
+				transpose(smallFrame, smallFrame);
+			}
+
+			if (cntFrameNum == 0)
+				continue;
+			// If the frame is empty, break immediately
+			if (smallFrame.empty())
+				break;
+			cv::equalizeHist(smallFrame, smallFrame);
+			blur(smallFrame, smallFrame, Size(fltrSz, fltrSz));
+			if (isToSave)
+			{
+				std::stringstream buf;
+				buf << dirName << fName << "/" << cntFrameNum << ".bmp";
+				imwrite(buf.str(), smallFrame);
+			}
 		}
-			
-		if (cntFrameNum == 0)
-			continue;
-		// If the frame is empty, break immediately
-		if (smallFrame.empty())
-			break;
-		cv::equalizeHist(smallFrame, smallFrame);
-		blur(smallFrame, smallFrame, Size(fltrSz, fltrSz));
+		else
+		{
+			cntFrameNum = 1475;
+			std::stringstream buf;
+			buf << dirName << fName << "/" << cntFrameNum << ".bmp";
+			smallFrame = imread(buf.str());
+			cvtColor(smallFrame, smallFrame, COLOR_BGR2GRAY);
+		}
 		Canny(smallFrame, grad8Thr, thrOfGrad, 2 * thrOfGrad);
+		threshold(smallFrame, matAdpt, thr, 255, THRESH_BINARY);
 		grad8Thr.setTo(0, map);
 		if (isWithDilate)
 		{
@@ -645,18 +666,27 @@ int main()
 			rct.x -= x;
 			rct.y -= y;
 			//rectangle(frameRgb, rct, colors[rc], 2);
-			if(rc== numOfShotsFound - 1)
-				rectangle(frameRgb, rct, Scalar(0,255,0), 1);
+			if (!isFromFile)
+			{
+				if (rc == numOfShotsFound - 1)
+					rectangle(frameRgb, rct, Scalar(0, 255, 0), 1);
+				else
+					rectangle(frameRgb, rct, Scalar(255, 0, 0), 1);
+			}
 			else
-				rectangle(frameRgb, rct, Scalar(255, 0, 0), 1);
+			{
+				rectangle(smallFrame, rct, Scalar(255, 0, 0), 1);
+			}
 		}
-
-		frameRgb.copyTo(frameRgbDisplayed);
-		cv::imshow("SHOTS", frameRgbDisplayed);
+		if (!isFromFile)
+		{
+			frameRgb.copyTo(frameRgbDisplayed);
+			cv::imshow("SHOTS", frameRgbDisplayed);
+			cv::imshow("PrevFrame", prevFrame);
+		}
 		cv::imshow("firstFrame", firstFrame);
 		cv::imshow("mapMar", mapMar);
 		cv::imshow("Frame", smallFrame);
-		cv::imshow("PrevFrame", prevFrame);
 		cv::imshow("gradThr", grad8Thr);
 		cv::imshow("gradFirst", firstGrad);
 		cv::setMouseCallback("gradThr", mouse_callback, (void*)&grad8Thr);
@@ -668,11 +698,14 @@ int main()
 			if (c == 27)
 				break;
 		}
-		else
+		else if (!isFromFile)
 			waitKey(25);
+		else
+			break;
 	}
 	//destroyAllWindows();
-	cv::imshow("SHOTS", frameRgbDisplayed);
+	if (!isFromFile)
+		cv::imshow("SHOTS", frameRgbDisplayed);
 	cv::waitKey();
 	cv::destroyAllWindows();
   // When everything done, release the video capture object

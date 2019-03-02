@@ -330,7 +330,7 @@ vector<Point> ContourData::FixSlightlyOpenContour()
 	return rpt;
 }
 
-bool ContourData::CompareContourAndReturnResidu(const ContourData& cdIn, vector<ContourData>& cdsResidu)
+bool ContourData::CompareContourAndReturnResidu(const ContourData& cdIn, vector<ContourData>& cdsResidu, Mat* thrMatP/*=NULL*/)
 {
 	bool prnt = false;
 	bool res = false;
@@ -346,6 +346,7 @@ bool ContourData::CompareContourAndReturnResidu(const ContourData& cdIn, vector<
 	int yMov = mDistToCenterOfLarge.y - cdIn.mDistToCenterOfLarge.y;
 	bool isFound = false;
 	vector<Point> cntr;
+	//Go over each pixel and find it's reference in the input contour
 	for (; m < mLen; ++m)
 	{
 		isFound = false;
@@ -361,7 +362,7 @@ bool ContourData::CompareContourAndReturnResidu(const ContourData& cdIn, vector<
 			}
 		}
 		if (!isFound)
-		{
+		{//Collect the not found pixels, maybe they are a new touching contour
 			cntr.push_back(mContour[m]);
 		}
 	}
@@ -392,11 +393,12 @@ bool ContourData::CompareContourAndReturnResidu(const ContourData& cdIn, vector<
 		cv::imshow("plineCmp", plineCmp);
 		cv::waitKey();
 	}
+	//If most of a lot of the pixels did not found in the input this is not the same contour
 	if (matchRatio < mMatchThr)
 		return res;
 	else
 	{
-		//seperate the points in cntr to groups of contours
+		//seperate the points in cntr (not found pixels) to groups of contours, s.t. we wont get contours with very far points in them
 		if (len > 10)
 		{
 			vector<vector<Point>> cntrTmp(len);
@@ -422,8 +424,9 @@ bool ContourData::CompareContourAndReturnResidu(const ContourData& cdIn, vector<
 					++numOfCntrs;
 				}
 			}
+			//Go over the groups of the contours
 			for (int c = 0; c < numOfCntrs; ++c)
-			{
+			{//add new contours to check
 				if (cntrTmp[c].size() > 10)
 				{
 					ContourData cdTmp(cntrTmp[c], mPicSize, mFrameNum, mIdxCntr);
