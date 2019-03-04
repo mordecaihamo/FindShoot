@@ -7,16 +7,16 @@
 using namespace cv;
 
 /**  @function Erosion  */
-void Erosion(Mat &src, Mat &dst, int erosion_size)
+void Erosion(Mat &src, Mat &dst, int erosion_size, int erosion_type)
 {
 	int erosion_elem = 2;
 	int dilation_elem = 0;
 	int const max_elem = 2;
 	int const max_kernel_size = 21;
-	int erosion_type;
-	if (erosion_elem == 0) { erosion_type = MORPH_RECT; }
-	else if (erosion_elem == 1) { erosion_type = MORPH_CROSS; }
-	else if (erosion_elem == 2) { erosion_type = MORPH_ELLIPSE; }
+	
+	//if (erosion_elem == 0) { erosion_type = MORPH_RECT; }
+	//else if (erosion_elem == 1) { erosion_type = MORPH_CROSS; }
+	//else if (erosion_elem == 2) { erosion_type = MORPH_ELLIPSE; }
 
 	Mat element = getStructuringElement(erosion_type,
 		Size(2 * erosion_size + 1, 2 * erosion_size + 1),
@@ -27,16 +27,16 @@ void Erosion(Mat &src, Mat &dst, int erosion_size)
 }
 
 /** @function Dilation */
-void Dilation(Mat &src, Mat &dst, int dilation_size, int dilationType)
+void Dilation(Mat &src, Mat &dst, int dilation_size, int dilation_type)
 {
 	int erosion_elem = 2;
 	int dilation_elem = 0;
 	int const max_elem = 2;
 	int const max_kernel_size = 21;
-	int dilation_type;
-	if (dilation_elem == 0) { dilation_type = MORPH_RECT; }
-	else if (dilation_elem == 1) { dilation_type = MORPH_CROSS; }
-	else if (dilation_elem == 2) { dilation_type = MORPH_ELLIPSE; }
+	
+	//if (dilation_elem == 0) { dilation_type = MORPH_RECT; }
+	//else if (dilation_elem == 1) { dilation_type = MORPH_CROSS; }
+	//else if (dilation_elem == 2) { dilation_type = MORPH_ELLIPSE; }
 
 	Mat element = getStructuringElement(dilation_type,
 		Size(2 * dilation_size + 1, 2 * dilation_size + 1),
@@ -124,10 +124,10 @@ Rect FindInboundRect(Rect rct, const Point* rectPoints)
 	if (y[1] < rct.y)
 		y[1] = rct.y;
 
-	if (x[2] > rct.x + rct.width)
-		x[2] = rct.x + rct.width;
-	if (y[2] > rct.y + rct.height)
-		y[2] = rct.y + rct.height;
+	if (x[2] >= rct.x + rct.width)
+		x[2] = rct.x + rct.width - 1;
+	if (y[2] >= rct.y + rct.height)
+		y[2] = rct.y + rct.height - 1;
 
 	rctInBound.x = x[1];
 	rctInBound.y = y[1];

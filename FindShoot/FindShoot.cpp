@@ -241,7 +241,6 @@ int main()
 	Mat map(sz.height, sz.width, CV_8UC1);
 	map.setTo(255);
 	drawPolyRect(map, metaData.mPoints, Scalar(0), -1);
-
 	Mat bgr[3];
 	split(smallFrame, bgr);
 	int selectedCh = 0;
@@ -256,7 +255,6 @@ int main()
 	cv::equalizeHist(firstFrame, firstFrame);
 	blur(firstFrame, firstFrame, Size(fltrSz, fltrSz));
 	firstFrame.copyTo(smallFrame);
-	
 	Rect rctMargin;
 	int look = 15;
 	rctMargin.x = look;
@@ -264,11 +262,9 @@ int main()
 	rctMargin.width = sz.width - 2 * look;
 	rctMargin.height = sz.height - 2 * look;
 	Mat target(sz.height, sz.width, CV_8UC1);
-	
 	Rect rectInBound = FindInboundRect(rctMargin, metaData.mPoints);
-	
+	cout << rectInBound.x << "," << rectInBound.y << "," << rectInBound.width << "," << rectInBound.height << "," << map.cols << "," << map.rows << endl;
 	drawPolyRect(target, metaData.mPoints, Scalar(0), -1);
-
 	Mat firstGrad;
 
 	Mat mapNot;
@@ -283,10 +279,9 @@ int main()
 	cv::threshold(target, target, 1, 255, THRESH_BINARY);
 	
 	Mat shiftMap = map(Rect(1, 1, sz.width - 1, sz.height - 1));
-
 	rectangle(target, rectInBound, Scalar(100));
 	Mat shot = map.clone();
-	Mat mapMar(map, rctMargin);
+	//Mat mapMar(map, rctMargin);
 	Mat targetMar(target, rctMargin);
 	int thrOfGrad = 70;
 	double thr = 128 + 7;
@@ -294,13 +289,12 @@ int main()
 //#undef min	cv::min(firstFrame, maxGrayLevelAllowed, firstFrame);
 	Canny(firstFrame, firstGrad, thrOfGrad, 3 * thrOfGrad);
 	firstGrad.setTo(0, map);
-	bool isWithDilate = true;
+	bool isWithDilate = false;
 	if (isWithDilate)
 	{
 		Dilation(firstGrad, firstGrad, 1);
 		Erosion(firstGrad, firstGrad, 1);
 	}
-	
 	cv::imshow("firstFrame", firstFrame);
 	cv::imshow("firstGrad", firstGrad);
 	cv::waitKey();
@@ -380,7 +374,7 @@ int main()
 	vector<ContourData> shotsCand;
 	bool isToBreak = false;
 	bool isToSave = false;
-	bool isFromFile = true;
+	bool isFromFile = true && !isToSave;
 	int sumX = 0, sumY = 0;
 	while(1)
 	{		
@@ -429,6 +423,7 @@ int main()
 			smallFrame = imread(buf.str());
 			cvtColor(smallFrame, smallFrame, COLOR_BGR2GRAY);
 		}
+		//Erosion(smallFrame, smallFrame, 1, MORPH_CROSS);
 		Canny(smallFrame, grad8Thr, thrOfGrad, 2 * thrOfGrad);
 		threshold(smallFrame, matAdpt, thr, 255, THRESH_BINARY);
 		grad8Thr.setTo(0, map);
@@ -575,7 +570,7 @@ int main()
 						//cv::imshow("grad", grad8Thr);
 						//cv::waitKey();
 						//cout << idxFirst << endl;
-						if (cntFrameNum == -118)// && idx == 2)// && idxFirst == 7)
+						if (cntFrameNum == -1475)// && idx == 2)// && idxFirst == 7)
 						{
 							shot.setTo(0);
 							//polylines(shot, cdsFrame[idxOfLargeInTheArray].mContour, true, 255, 1, 8);
@@ -651,6 +646,7 @@ int main()
 						cv::imshow("gradThr", grad8Thr);
 						cv::imshow("Frame", smallFrame);
 						cv::imshow("cntr", shot);
+						//cv::imshow("gradMat", matAdpt);
 						//cv::waitKey();
 						cout << "Num of shots in frame " << cntFrameNum << " is " << shotsCand.size() << endl;
 						//cntrDataFirst.push_back(cd);
@@ -658,7 +654,9 @@ int main()
 				}
 			}
 		}
-
+		Mat matToDraw(sz.height, sz.width, CV_8UC1);
+		//NMS(shotsCand,&matToDraw);
+		NMS(shotsCand);
 		int numOfShotsFound = (int)shotsCand.size();
 		for (int rc = 0; rc < numOfShotsFound; ++rc)
 		{
@@ -685,10 +683,9 @@ int main()
 			cv::imshow("PrevFrame", prevFrame);
 		}
 		cv::imshow("firstFrame", firstFrame);
-		cv::imshow("mapMar", mapMar);
+		//cv::imshow("mapMar", mapMar);
 		cv::imshow("Frame", smallFrame);
 		cv::imshow("gradThr", grad8Thr);
-		cv::imshow("gradFirst", firstGrad);
 		cv::setMouseCallback("gradThr", mouse_callback, (void*)&grad8Thr);
 		// Press  ESC on keyboard to exit
 		if (0)//cntFrameNum > 680)//isToBreak)//

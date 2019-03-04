@@ -8,7 +8,7 @@
 using namespace cv;
 using namespace std;
 /**  @function Erosion  */
-void Erosion(Mat &src, Mat &dst, int erosion_size);
+void Erosion(Mat &src, Mat &dst, int erosion_size, int erosionType = 0);
 /** @function Dilation */
 void Dilation(Mat &src, Mat &dst, int dilation_size, int dilationType = 0);
 

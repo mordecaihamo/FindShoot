@@ -1,7 +1,9 @@
 #include "pch.h"
 #include "ShootTargetMetaData.h"
 #include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
 #include <fstream>
+#include <iostream>
 
 bool IsItShot(ContourData cd)
 {
@@ -28,6 +30,76 @@ void drawPolyRect(cv::Mat& img, const Point* p, Scalar color, int lineWd)
 	else if(lineWd < 0)
 	{
 		fillConvexPoly(img, p, 4, color);
+	}
+}
+
+//Unite small contour near large contour
+void NMS(vector<ContourData> cntrs, Mat* matToDraw)
+{
+	int sz = (int)cntrs.size();
+	for (int i = 0; i < (int)cntrs.size(); ++i)
+	{
+		if (matToDraw)
+		{
+			cout << "cntr " << i << endl;
+			matToDraw->setTo(0);
+			polylines(*matToDraw, cntrs[i].mContour, true, 255, 1, 8);
+			imshow("cntr", *matToDraw);
+			//waitKey();
+		}
+		if (cntrs[i].mLen > 20)//too large, find only the small ones
+		{
+			continue;
+		}
+		int minDisCntr = INT_MAX;
+		int minDisCntrIdx = -1;
+		//Find the contours that is the closest
+		for (int j = 0; j < (int)cntrs.size(); ++j)
+		{
+			if (i == j)
+				continue;
+			if (matToDraw)
+			{
+				cout << "cntr " << i << " and " << j << endl;
+				matToDraw->setTo(0);
+				polylines(*matToDraw, cntrs[i].mContour, true, 255, 1, 8);
+				polylines(*matToDraw, cntrs[j].mContour, true, 128, 1, 8);
+				imshow("cntr", *matToDraw);
+				//waitKey();
+			}
+			int dx = abs(cntrs[i].mCg.x - cntrs[j].mCg.x);
+			int dy = abs(cntrs[i].mCg.y - cntrs[j].mCg.y);
+			//Check if the center of gravity is too far
+			if (dx > 15 && dy > 15)
+				continue;
+
+			int minDisPoint = INT_MAX;
+			for (int c1 = 0; c1 < cntrs[i].mLen; ++c1)
+			{
+				for (int c2 = 0; c2 < cntrs[j].mLen; ++c2)
+				{
+					int dx = cntrs[i].mContour[c1].x - cntrs[j].mContour[c2].x;
+					int dy = cntrs[i].mContour[c1].y - cntrs[j].mContour[c2].y;
+					int dis = dx * dx + dy * dy;
+					if (dis < minDisPoint)
+						minDisPoint = dis;
+				}
+			}
+			if (minDisPoint < minDisCntr)
+			{
+				minDisCntr = minDisPoint;
+				minDisCntrIdx = j;
+			}
+			if (minDisPoint <= 6)//unite
+			{
+				vector<Point> u = cntrs[j].mContour;
+				u.insert(u.end(), cntrs[i].mContour.begin(), cntrs[i].mContour.end());
+				ContourData cd(u, cntrs[i].mPicSize, cntrs[i].mFrameNum, cntrs[i].mIdxCntr);
+				cntrs.erase(cntrs.begin() + i);
+				cntrs.erase(cntrs.begin() + j);
+				cntrs.push_back(cd);
+			}
+		}
 	}
 }
 
