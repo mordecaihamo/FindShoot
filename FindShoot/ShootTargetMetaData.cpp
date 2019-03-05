@@ -34,7 +34,7 @@ void drawPolyRect(cv::Mat& img, const Point* p, Scalar color, int lineWd)
 }
 
 //Unite small contour near large contour
-void NMS(vector<ContourData> cntrs, Mat* matToDraw)
+void NMS(vector<ContourData>& cntrs, Mat* matToDraw)
 {
 	int sz = (int)cntrs.size();
 	for (int i = 0; i < (int)cntrs.size(); ++i)
@@ -65,7 +65,8 @@ void NMS(vector<ContourData> cntrs, Mat* matToDraw)
 				polylines(*matToDraw, cntrs[i].mContour, true, 255, 1, 8);
 				polylines(*matToDraw, cntrs[j].mContour, true, 128, 1, 8);
 				imshow("cntr", *matToDraw);
-				//waitKey();
+				if(i==3 && j==38)
+					waitKey();
 			}
 			int dx = abs(cntrs[i].mCg.x - cntrs[j].mCg.x);
 			int dy = abs(cntrs[i].mCg.y - cntrs[j].mCg.y);
@@ -95,8 +96,8 @@ void NMS(vector<ContourData> cntrs, Mat* matToDraw)
 				vector<Point> u = cntrs[j].mContour;
 				u.insert(u.end(), cntrs[i].mContour.begin(), cntrs[i].mContour.end());
 				ContourData cd(u, cntrs[i].mPicSize, cntrs[i].mFrameNum, cntrs[i].mIdxCntr);
-				cntrs.erase(cntrs.begin() + i);
-				cntrs.erase(cntrs.begin() + j);
+				cntrs.erase(cntrs.begin() + max(i,j));//If we remove the smaller first the big one is not pointing correct
+				cntrs.erase(cntrs.begin() + min(i,j));
 				cntrs.push_back(cd);
 			}
 		}

@@ -374,7 +374,7 @@ int main()
 	vector<ContourData> shotsCand;
 	bool isToBreak = false;
 	bool isToSave = false;
-	bool isFromFile = true && !isToSave;
+	bool isFromFile = false && !isToSave;
 	int sumX = 0, sumY = 0;
 	while(1)
 	{		
@@ -674,6 +674,8 @@ int main()
 			else
 			{
 				rectangle(smallFrame, rct, Scalar(255, 0, 0), 1);
+				//cv::imshow("Frame", smallFrame);
+				//cv::waitKey();
 			}
 		}
 		if (!isFromFile)
