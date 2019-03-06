@@ -417,7 +417,7 @@ int main()
 		}
 		else
 		{
-			cntFrameNum = 1475;
+			cntFrameNum = 316;
 			std::stringstream buf;
 			buf << dirName << fName << "/" << cntFrameNum << ".bmp";
 			smallFrame = imread(buf.str());
@@ -433,7 +433,6 @@ int main()
 			Erosion(grad8Thr, grad8Thr, 1);
 		}
 		int x = 0, y = 0;
-		//if (cntFrameNum == 738)	isToDisplay = true;
 
 		vector<vector<Point> > contours;
 		vector<Vec4i> hierarchy;
@@ -654,8 +653,7 @@ int main()
 				}
 			}
 		}
-		Mat matToDraw(sz.height, sz.width, CV_8UC1);
-		//NMS(shotsCand,&matToDraw);
+		//Mat matToDraw(sz.height, sz.width, CV_8UC1);		NMS(shotsCand,&matToDraw);
 		NMS(shotsCand);
 		int numOfShotsFound = (int)shotsCand.size();
 		for (int rc = 0; rc < numOfShotsFound; ++rc)
@@ -673,7 +671,7 @@ int main()
 			}
 			else
 			{
-				rectangle(smallFrame, rct, Scalar(255, 0, 0), 1);
+				rectangle(smallFrame, rct, Scalar(10, 0, 0), 1);
 				//cv::imshow("Frame", smallFrame);
 				//cv::waitKey();
 			}

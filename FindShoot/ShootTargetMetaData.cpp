@@ -37,6 +37,9 @@ void drawPolyRect(cv::Mat& img, const Point* p, Scalar color, int lineWd)
 void NMS(vector<ContourData>& cntrs, Mat* matToDraw)
 {
 	int sz = (int)cntrs.size();
+	if (matToDraw)
+	{
+	}
 	for (int i = 0; i < (int)cntrs.size(); ++i)
 	{
 		if (matToDraw)
@@ -45,9 +48,9 @@ void NMS(vector<ContourData>& cntrs, Mat* matToDraw)
 			matToDraw->setTo(0);
 			polylines(*matToDraw, cntrs[i].mContour, true, 255, 1, 8);
 			imshow("cntr", *matToDraw);
-			//waitKey();
+			waitKey();
 		}
-		if (cntrs[i].mLen > 20)//too large, find only the small ones
+		if (cntrs[i].mLen > 29)//too large, find only the small ones
 		{
 			continue;
 		}
@@ -65,7 +68,7 @@ void NMS(vector<ContourData>& cntrs, Mat* matToDraw)
 				polylines(*matToDraw, cntrs[i].mContour, true, 255, 1, 8);
 				polylines(*matToDraw, cntrs[j].mContour, true, 128, 1, 8);
 				imshow("cntr", *matToDraw);
-				if(i==3 && j==38)
+				//if(i==2 && j==3)
 					waitKey();
 			}
 			int dx = abs(cntrs[i].mCg.x - cntrs[j].mCg.x);
@@ -82,6 +85,16 @@ void NMS(vector<ContourData>& cntrs, Mat* matToDraw)
 					int dx = cntrs[i].mContour[c1].x - cntrs[j].mContour[c2].x;
 					int dy = cntrs[i].mContour[c1].y - cntrs[j].mContour[c2].y;
 					int dis = dx * dx + dy * dy;
+					if (0 && matToDraw && i == 2 && j == 3)
+					{
+						matToDraw->at<uchar>(cntrs[i].mContour[c1].y, cntrs[i].mContour[c1].x) = 128;
+						matToDraw->at<uchar>(cntrs[j].mContour[c2].y, cntrs[j].mContour[c2].x) = 255;
+						cout << dis << endl;
+						imshow("cntr", *matToDraw);
+						waitKey();
+						matToDraw->at<uchar>(cntrs[i].mContour[c1].y, cntrs[i].mContour[c1].x) = 255;
+						matToDraw->at<uchar>(cntrs[j].mContour[c2].y, cntrs[j].mContour[c2].x) = 128;
+					}
 					if (dis < minDisPoint)
 						minDisPoint = dis;
 				}
@@ -91,14 +104,14 @@ void NMS(vector<ContourData>& cntrs, Mat* matToDraw)
 				minDisCntr = minDisPoint;
 				minDisCntrIdx = j;
 			}
-			if (minDisPoint <= 6)//unite
+			if (minDisPoint <= 10)//unite
 			{
 				vector<Point> u = cntrs[j].mContour;
 				u.insert(u.end(), cntrs[i].mContour.begin(), cntrs[i].mContour.end());
 				ContourData cd(u, cntrs[i].mPicSize, cntrs[i].mFrameNum, cntrs[i].mIdxCntr);
-				cntrs.erase(cntrs.begin() + max(i,j));//If we remove the smaller first the big one is not pointing correct
-				cntrs.erase(cntrs.begin() + min(i,j));
-				cntrs.push_back(cd);
+				cntrs[i] = cd;//replace with the united contour
+				cntrs.erase(cntrs.begin() + j);
+				--j;				
 			}
 		}
 	}
