@@ -104,7 +104,7 @@ void NMS(vector<ContourData>& cntrs, Mat* matToDraw)
 				minDisCntr = minDisPoint;
 				minDisCntrIdx = j;
 			}
-			if (minDisPoint <= 10)//unite
+			if (minDisPoint <= 10)//unite if the distance is small
 			{
 				vector<Point> u = cntrs[j].mContour;
 				u.insert(u.end(), cntrs[i].mContour.begin(), cntrs[i].mContour.end());
