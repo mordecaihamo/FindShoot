@@ -385,8 +385,6 @@ int main()
 			cap >> frame;
 			cntFrameNum++;
 			cout << cntFrameNum << endl;
-			//auto res=cap.retrieve(frame, cntFrameNum);
-			//cntFrameNum += 10;
 
 			if (frame.size().height == 0)
 				break;
