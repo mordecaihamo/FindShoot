@@ -686,7 +686,7 @@ int main()
 		cv::imshow("gradThr", grad8Thr);
 		cv::setMouseCallback("gradThr", mouse_callback, (void*)&grad8Thr);
 		// Press  ESC on keyboard to exit
-		if (0)//cntFrameNum > 680)//isToBreak)//
+		if (1)//cntFrameNum > 680)//isToBreak)//
 		{
 			isToBreak = false;
 			char c = (char)cv::waitKey();

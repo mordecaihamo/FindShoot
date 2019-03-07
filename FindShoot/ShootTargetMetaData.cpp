@@ -37,9 +37,6 @@ void drawPolyRect(cv::Mat& img, const Point* p, Scalar color, int lineWd)
 void NMS(vector<ContourData>& cntrs, Mat* matToDraw)
 {
 	int sz = (int)cntrs.size();
-	if (matToDraw)
-	{
-	}
 	for (int i = 0; i < (int)cntrs.size(); ++i)
 	{
 		if (matToDraw)
@@ -111,6 +108,8 @@ void NMS(vector<ContourData>& cntrs, Mat* matToDraw)
 				ContourData cd(u, cntrs[i].mPicSize, cntrs[i].mFrameNum, cntrs[i].mIdxCntr);
 				cntrs[i] = cd;//replace with the united contour
 				cntrs.erase(cntrs.begin() + j);
+				if (j < i)
+					--i;
 				--j;				
 			}
 		}
