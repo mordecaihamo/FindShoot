@@ -28,7 +28,11 @@ void CalcAverageRectInOutColor(Mat& img, ContourData& cd)
 	cd.mAvgOutRctColor = 0;
 	cd.mAvgInRctColor = 0;
 	
-	Rect outRct(cd.mShRct), inRct(cd.mShRct);
+	Rect outRct(cd.mShRct);
+	int shift = 0;
+	outRct.x = max(0, outRct.x - shift);
+	outRct.y = max(0, outRct.y - shift);
+	Rect inRct(cd.mShRct);
 	outRct.x = max(outRct.x - 1, 0);
 	outRct.y = max(outRct.y - 1, 0);
 	if (outRct.x + outRct.width + 1 < img.cols)
@@ -344,8 +348,18 @@ bool ContourData::CompareContourAndReturnResidu(const ContourData& cdIn, vector<
 	int minDis = 3;
 	int xMov = mDistToCenterOfLarge.x - cdIn.mDistToCenterOfLarge.x;
 	int yMov = mDistToCenterOfLarge.y - cdIn.mDistToCenterOfLarge.y;
+	if (abs(xMov) > 120 || abs(yMov) > 120)
+	{
+		return res;
+	}
+	else if (abs(xMov) > 30 || abs(yMov) > 30)
+	{
+		xMov = 0;
+		yMov = 0;
+	}
 	bool isFound = false;
 	vector<Point> cntr;
+	int globalMinDis = INT_MAX;
 	//Go over each pixel and find it's reference in the input contour
 	for (; m < mLen; ++m)
 	{
@@ -354,6 +368,11 @@ bool ContourData::CompareContourAndReturnResidu(const ContourData& cdIn, vector<
 		{
 			int dxP = abs((mContour[m].x - xMov) - (cdIn.mContour[o].x));
 			int dyP = abs((mContour[m].y - yMov) - (cdIn.mContour[o].y));
+			int dis = dxP + dyP;
+			if (dis < globalMinDis)
+			{
+				globalMinDis = dis;
+			}
 			if (dxP < minDis && dyP < minDis)
 			{
 				++numOfFoundPix;

@@ -5,15 +5,32 @@
 #include <fstream>
 #include <iostream>
 
-bool IsItShot(ContourData cd)
+bool IsItShot(ContourData& cd)
 {
 	bool res = false;
-	if (cd.mAvgOutRctColor - cd.mAvgInRctColor > 15 && cd.mAvgInRctColor < 200 && cd.mRatioWh > 0.25 && cd.mShRct.width < 25 && cd.mShRct.height < 25)
+	if (cd.mAvgOutRctColor - cd.mAvgInRctColor > 15 && cd.mAvgInRctColor < 200 && cd.mRatioWh > 0.25 && cd.mShRct.width < 25 && cd.mShRct.height < 25 && cd.mAr>0.01)
 	{
 		//if(	(cd.mAr > 10 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 2 && cd.mShRct.height > 2 && cd.mRatioWh > 0.54) /*||
 		//	(cd.mAr > 25 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 4 && cd.mShRct.height > 4 && cd.mRatioWh > 0.45) ||
 		//	(cd.mAr >= 3 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 4 && cd.mShRct.height >= 4 && cd.mRatioWh > 0.79)*/)
 			res = true;
+	}
+	return res;
+}
+
+bool IsItShot(ContourData cd, Mat thrMap)
+{
+	bool res = false;
+	double mn, mx;
+	Point mnLoc, mxLoc;
+	Mat shArea = thrMap(cd.mShRct);
+	minMaxLoc(shArea, &mn, &mx, &mnLoc, &mxLoc);
+	if (cd.mAvgOutRctColor - cd.mAvgInRctColor > 15 && cd.mAvgInRctColor < 200 && cd.mRatioWh > 0.25 && cd.mShRct.width < 25 && cd.mShRct.height < 25 && mn < 1.0f)
+	{
+		//if(	(cd.mAr > 10 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 2 && cd.mShRct.height > 2 && cd.mRatioWh > 0.54) /*||
+		//	(cd.mAr > 25 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 4 && cd.mShRct.height > 4 && cd.mRatioWh > 0.45) ||
+		//	(cd.mAr >= 3 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 4 && cd.mShRct.height >= 4 && cd.mRatioWh > 0.79)*/)
+		res = true;
 	}
 	return res;
 }
@@ -34,20 +51,20 @@ void drawPolyRect(cv::Mat& img, const Point* p, Scalar color, int lineWd)
 }
 
 //Unite small contour near large contour
-void NMS(vector<ContourData>& cntrs, Mat* matToDraw)
+void NMS(vector<ContourData>& cntrs, Mat& frameMat, Mat* matToDraw)
 {
 	int sz = (int)cntrs.size();
 	for (int i = 0; i < (int)cntrs.size(); ++i)
 	{
-		if (matToDraw)
+		if (1&&matToDraw)
 		{
 			cout << "cntr " << i << endl;
 			matToDraw->setTo(0);
 			polylines(*matToDraw, cntrs[i].mContour, true, 255, 1, 8);
-			imshow("cntr", *matToDraw);
+			imshow("NMScntr", *matToDraw);
 			waitKey();
 		}
-		if (cntrs[i].mLen > 29)//too large, find only the small ones
+		if (cntrs[i].mLen > 35)//too large, find only the small ones
 		{
 			continue;
 		}
@@ -58,14 +75,14 @@ void NMS(vector<ContourData>& cntrs, Mat* matToDraw)
 		{
 			if (i == j)
 				continue;
-			if (matToDraw)
+			if (0&&matToDraw)
 			{
 				cout << "cntr " << i << " and " << j << endl;
 				matToDraw->setTo(0);
 				polylines(*matToDraw, cntrs[i].mContour, true, 255, 1, 8);
 				polylines(*matToDraw, cntrs[j].mContour, true, 128, 1, 8);
 				imshow("cntr", *matToDraw);
-				//if(i==2 && j==3)
+				if(i==2 /*&& j==2*/)
 					waitKey();
 			}
 			int dx = abs(cntrs[i].mCg.x - cntrs[j].mCg.x);
@@ -101,16 +118,118 @@ void NMS(vector<ContourData>& cntrs, Mat* matToDraw)
 				minDisCntr = minDisPoint;
 				minDisCntrIdx = j;
 			}
-			if (minDisPoint <= 10)//unite if the distance is small
+			if (minDisPoint <= 15)//unite if the distance is small
 			{
-				vector<Point> u = cntrs[j].mContour;
-				u.insert(u.end(), cntrs[i].mContour.begin(), cntrs[i].mContour.end());
-				ContourData cd(u, cntrs[i].mPicSize, cntrs[i].mFrameNum, cntrs[i].mIdxCntr);
-				cntrs[i] = cd;//replace with the united contour
-				cntrs.erase(cntrs.begin() + j);
-				if (j < i)
-					--i;
-				--j;				
+				Rect uniteRect = cntrs[i].mShRct;
+				uniteRect.x = min(uniteRect.x, cntrs[j].mShRct.x);
+				uniteRect.y = min(uniteRect.y, cntrs[j].mShRct.y);
+				if (uniteRect.x + uniteRect.width < cntrs[j].mShRct.x + cntrs[j].mShRct.width)
+				{
+					uniteRect.width = cntrs[j].mShRct.x + cntrs[j].mShRct.width - uniteRect.x + 1;
+				}
+				if (uniteRect.y + uniteRect.height < cntrs[j].mShRct.y + cntrs[j].mShRct.height)
+				{
+					uniteRect.height = cntrs[j].mShRct.y + cntrs[j].mShRct.height - uniteRect.y + 1;
+				}
+				//Add border to avoid entering the holes
+				int border = 5;
+				uniteRect.x = max(uniteRect.x - border, 0);
+				uniteRect.y = max(uniteRect.y - border, 0);
+				if (uniteRect.x + uniteRect.width + 2 * border < frameMat.cols)
+				{
+					uniteRect.width += 2 * border;
+				}
+				else
+				{
+					uniteRect.width = frameMat.cols - uniteRect.x;
+				}
+
+				if (uniteRect.y + uniteRect.height + 2 * border < frameMat.rows)
+				{
+					uniteRect.height += 2 * border;
+				}
+				else
+				{
+					uniteRect.height = frameMat.rows - uniteRect.y;
+				}
+				Mat uniteMat = frameMat(uniteRect);
+				int valAtCorners[4];
+				valAtCorners[0] = uniteMat.at<uchar>(0, 0);
+				valAtCorners[1] = uniteMat.at<uchar>(0, uniteRect.width-1);
+				valAtCorners[2] = uniteMat.at<uchar>(uniteRect.height - 1, uniteRect.width - 1);
+				valAtCorners[3] = uniteMat.at<uchar>(uniteRect.height - 1, 0);
+				int thr = valAtCorners[0];
+				for (int i = 1; i < 4; ++i)
+				{
+					if (thr < valAtCorners[i])
+					{
+						thr = valAtCorners[i];
+					}
+				}
+
+				Point pi, pj;
+				int offSet = 5;
+				pi.x = max(0,(int)round(cntrs[i].mCg.x - uniteRect.x - offSet+2));
+				pi.y = max(0, (int)round(cntrs[i].mCg.y - uniteRect.y - offSet));
+				pj.x = max(0, (int)round(cntrs[j].mCg.x - uniteRect.x - offSet+2));
+				pj.y = max(0, (int)round(cntrs[j].mCg.y - uniteRect.y - offSet));
+
+				LineIterator lit(uniteMat, pi,pj , 8);
+				vector<uchar> lineVal(lit.count);
+				int maxValOnLine = INT_MIN;
+				int maxLocation = -1;
+				for (int t = 0; t < lit.count; ++t,++lit)
+				{
+					lineVal[t] = **lit;
+					if (lineVal[t] > maxValOnLine)
+					{
+						maxValOnLine = lineVal[t];
+						maxLocation = t;
+					}
+					if (matToDraw)
+					{
+						**lit = 255;
+					}
+				}
+				//thr = floor(0.5*(mn + thr));
+				//Mat thrMat;
+				//adaptiveThreshold(uniteMat, thrMat, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, (max(uniteMat.rows, uniteMat.cols) | 1) - 2, 0);
+				//threshold(uniteMat, thrMat, thr, 255, THRESH_BINARY);
+				Rect localRct = uniteRect;
+				localRct.x = 0;
+				localRct.y = 0;
+				//rectangle(thrMat, localRct, 255, border >> 1);
+				
+				//vector<vector<Point> > contours;
+				//vector<Vec4i> hierarchy;
+				//cv::findContours(thrMat, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_NONE);
+				//int cntrSz = (int)contours.size();
+				if (matToDraw)
+				{
+					cout << "cntr " << i << " and " << j << endl;
+					matToDraw->setTo(0);
+					polylines(*matToDraw, cntrs[i].mContour, true, 255, 1, 8);
+					polylines(*matToDraw, cntrs[j].mContour, true, 128, 1, 8);
+					rectangle(*matToDraw, uniteRect, Scalar(200), 1);
+					imshow("cntr", *matToDraw);
+					imshow("uniteMat", uniteMat);
+					//imshow("thrMat", thrMat);
+					waitKey();
+				}
+				//If the max is at the end or at the start than it is a single shot
+				if(	lit.count < 7 ||
+					!(lineVal[0]>thr || lineVal[0]>200 || lineVal[lit.count-1]>thr || lineVal[lit.count - 1]>200) || 
+					(maxLocation < 0.3*lit.count || maxLocation > 0.7*lit.count || maxValOnLine < thr-10))
+				{
+					vector<Point> u = cntrs[j].mContour;
+					u.insert(u.end(), cntrs[i].mContour.begin(), cntrs[i].mContour.end());
+					ContourData cd(u, cntrs[i].mPicSize, cntrs[i].mFrameNum, cntrs[i].mIdxCntr);
+					cntrs[i] = cd;//replace with the united contour
+					cntrs.erase(cntrs.begin() + j);
+					if (j < i)
+						--i;
+					--j;
+				}
 			}
 		}
 	}

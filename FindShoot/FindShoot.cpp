@@ -187,7 +187,7 @@ int main()
 	}
 	
 	Size sz = frame.size();
-	if (sz.width > 800)
+	if (sz.width != 740)
 	{
 		sz.height = cvRound(sz.height*(740.0f / sz.width));
 		sz.width = 740;		
@@ -295,9 +295,9 @@ int main()
 		Dilation(firstGrad, firstGrad, 1);
 		Erosion(firstGrad, firstGrad, 1);
 	}
-	cv::imshow("firstFrame", firstFrame);
-	cv::imshow("firstGrad", firstGrad);
-	cv::waitKey();
+	//cv::imshow("firstFrame", firstFrame);
+	//cv::imshow("firstGrad", firstGrad);
+	//cv::waitKey();
 	//cv::threshold(firstGrad, firstGrad, thrOfGrad, 255, THRESH_BINARY);
 	//Map all the contours of the first frame
 	vector<vector<Point> > contoursFirst;
@@ -369,12 +369,14 @@ int main()
 	Mat frameRgbDisplayed;
 	cv::imshow("gradFirst", firstGrad);
 	shot.setTo(0);
+	double measureSharpnessThr = 350.0f;
 	vector<Rect> foundShotRects;
 	vector<Scalar> colors;
 	vector<ContourData> shotsCand;
 	bool isToBreak = false;
 	bool isToSave = false;
-	bool isFromFile = false && !isToSave;
+	bool isInspectNms = false;
+	bool isFromFile = true && !isToSave;
 	int sumX = 0, sumY = 0;
 	while(1)
 	{		
@@ -415,7 +417,7 @@ int main()
 		}
 		else
 		{
-			cntFrameNum = 316;
+			cntFrameNum = 314;// 1475;// 562;
 			std::stringstream buf;
 			buf << dirName << fName << "/" << cntFrameNum << ".bmp";
 			smallFrame = imread(buf.str());
@@ -423,7 +425,24 @@ int main()
 		}
 		//Erosion(smallFrame, smallFrame, 1, MORPH_CROSS);
 		Canny(smallFrame, grad8Thr, thrOfGrad, 2 * thrOfGrad);
-		threshold(smallFrame, matAdpt, thr, 255, THRESH_BINARY);
+		//threshold(smallFrame, matAdpt, thr, 255, THRESH_BINARY);
+		Mat matDx, matDy;
+		Sobel(smallFrame, matDx, CV_16S, 1, 0);
+		Sobel(smallFrame, matDy, CV_16S, 0, 1);
+		matDx.setTo(0, map);
+		matDy.setTo(0, map);
+		double mnx, mxx, mny, mxy;
+		minMaxLoc(matDx, &mnx, &mxx);
+		minMaxLoc(matDy, &mny, &mxy);
+		double sharpMeasure = max(max(max(abs(mnx), abs(mxx)), abs(mny)), abs(mxy));
+		if (sharpMeasure < measureSharpnessThr)
+		{
+			cout << "Skipping " << cntFrameNum << " Blured frame " << sharpMeasure << endl;
+			continue;//Blured image
+		}
+			
+		//adaptiveThreshold(smallFrame, matAdpt, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, (sz.width|1) - 2, 0);
+		//matAdpt.setTo(0, map);
 		grad8Thr.setTo(0, map);
 		if (isWithDilate)
 		{
@@ -435,12 +454,12 @@ int main()
 		vector<vector<Point> > contours;
 		vector<Vec4i> hierarchy;
 		cv::findContours(grad8Thr, contours, hierarchy,RETR_CCOMP, CHAIN_APPROX_NONE);
-		int cntrSz = (int)contours.size();
+
+		int numOfContours = (int)contours.size();
 		char buf[256] = { '\0' };
-		sprintf_s(buf, "FindShot: F=%d move x=%d y=%d. Found cntr=%d\n", cntFrameNum,x,y,cntrSz);
+		sprintf_s(buf, "FindShot: F=%d move x=%d y=%d. Found cntr=%d\n", cntFrameNum,x,y, numOfContours);
 		OutputDebugStringA(buf);
 /*********/
-		int numOfContours = (int)contours.size();
 		int idxMax = -1;
 		int rectAreaMax = 0;
 		Point2f pntCgMax(0, 0);
@@ -454,35 +473,38 @@ int main()
 //			for (; idx >= 0; idx=hierarchy[idx][0])
 			while(idx>=0)
 			{
-				ContourData cd(contours[idx], sz);
-				CalcAverageBorderColor(smallFrame, cd);
-				if (cd.mShRct.width == 0 || cd.mShRct.height == 0)
-					continue;
-				//shot.setTo(0);
-				//polylines(shot, cd.mContour, true, 255, 1, 8);
-				//cv::setMouseCallback("shot", mouse_callback, &metaData);
-				//cv::imshow("cntr", shot);
-				//cv::imshow("grad", grad8Thr);
-				//cv::waitKey();
-				//char buf[256] = { '\0' };
-				//sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
-				//	cntFrameNum, idx, numOfContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mCg.x, cd.mCg.y, cd.mLen, cd.mRatioFromAll);
-				//OutputDebugStringA(buf);
-				if (cd.mLen > rectAreaMax)
+				if (contours[idx].size() > 9)
 				{
-					rectAreaMax = cd.mLen;
-					idxMax = idx;
-					pntCgMax = cd.mCg;
-					idxOfLargeInTheArray = (int)cdsFrame.size();
+					ContourData cd(contours[idx], sz);
+					CalcAverageBorderColor(smallFrame, cd);
+					if (cd.mShRct.width == 0 || cd.mShRct.height == 0)
+						continue;
+					//shot.setTo(0);
+					//polylines(shot, cd.mContour, true, 255, 1, 8);
+					//cv::setMouseCallback("shot", mouse_callback, &metaData);
+					//cv::imshow("cntr", shot);
+					//cv::imshow("grad", grad8Thr);
+					//cv::waitKey();
+					//char buf[256] = { '\0' };
+					//sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
+					//	cntFrameNum, idx, numOfContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mCg.x, cd.mCg.y, cd.mLen, cd.mRatioFromAll);
+					//OutputDebugStringA(buf);
+					if (cd.mLen > rectAreaMax)
+					{
+						rectAreaMax = cd.mLen;
+						idxMax = idx;
+						pntCgMax = cd.mCg;
+						idxOfLargeInTheArray = (int)cdsFrame.size();
+					}
+					//if (cd.mLen < 10 /*|| (cd.mShRct.width > 25 && cd.mShRct.height > 25)*/)//too small delete it
+					//{
+					//	contours.erase(contours.begin() + idx);
+					//	--idx;
+					//	numOfContours--;
+					//}
+					if (cd.mLen >= 10)
+						cdsFrame.push_back(cd);
 				}
-				//if (cd.mLen < 10 /*|| (cd.mShRct.width > 25 && cd.mShRct.height > 25)*/)//too small delete it
-				//{
-				//	contours.erase(contours.begin() + idx);
-				//	--idx;
-				//	numOfContours--;
-				//}
-				if (cd.mLen >= 10)
-					cdsFrame.push_back(cd);
 				if(idx < 0)
 					break;
 				idx = hierarchy[idx][0];
@@ -535,7 +557,7 @@ int main()
 				sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
 					cntFrameNum, idx, numOfContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mCg.x, cd.mCg.y, cd.mLen, cd.mRatioFromAll);
 				OutputDebugStringA(buf);
-				if (cntFrameNum == -1475)// && idx == 2)// && idxFirst == 7)
+				if (cntFrameNum == -222)// && idx == 2)// && idxFirst == 7)
 				{
 					shot.setTo(0);
 					cv::rectangle(shot, cdsFrame[idxOfLargeInTheArray].mShRct, 255);
@@ -549,7 +571,7 @@ int main()
 					cv::imshow("Frame", smallFrame);
 					cv::waitKey();
 				}
-				if ((cd.mAr > arMax) && IsItShot(cd))
+				if (IsItShot(cd))
 				{
 					/*Need to go over the first contours compare its cg and MatchShape and see if this one is new, if yes add it to the list*/
 					
@@ -567,11 +589,12 @@ int main()
 						//cv::imshow("grad", grad8Thr);
 						//cv::waitKey();
 						//cout << idxFirst << endl;
-						if (cntFrameNum == -1475)// && idx == 2)// && idxFirst == 7)
+						if (cntFrameNum == -222)// && idx == 2)// && idxFirst == 7)
 						{
 							shot.setTo(0);
 							//polylines(shot, cdsFrame[idxOfLargeInTheArray].mContour, true, 255, 1, 8);
 							//polylines(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mContour, true, 128, 1, 8);
+							cout << "Check " << idx << " with " << idxFirst << endl;
 							polylines(shot, cd.mContour, true, 255, 1, 8);
 							polylines(shot, cdf.mContour, true, 128, 1, 8);
 							//circle(shot, cdsFrame[idxOfLargeInTheArray].mCg, 3, 255);
@@ -640,20 +663,25 @@ int main()
 						sprintf_s(buf, "FindShot: New F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
 							cntFrameNum, idx, numOfContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mCg.x, cd.mCg.y, cd.mLen, cd.mRatioFromAll);
 						OutputDebugStringA(buf);						
-						cv::imshow("gradThr", grad8Thr);
-						cv::imshow("Frame", smallFrame);
-						cv::imshow("cntr", shot);
+						//cv::imshow("gradThr", grad8Thr);
+						//cv::imshow("Frame", smallFrame);
+						//cv::imshow("cntr", shot);
 						//cv::imshow("gradMat", matAdpt);
 						//cv::waitKey();
-						cout << "Num of shots in frame " << cntFrameNum << " is " << shotsCand.size() << endl;
+						//cout << "Num of shots in frame " << cntFrameNum << " is " << shotsCand.size() << endl;
 						//cntrDataFirst.push_back(cd);
 					}
 				}
 			}
 		}
-		//Mat matToDraw(sz.height, sz.width, CV_8UC1);		NMS(shotsCand,&matToDraw);
-		NMS(shotsCand);
+		if (isFromFile && isInspectNms)
+		{
+			Mat matToDraw(sz.height, sz.width, CV_8UC1);		NMS(shotsCand, smallFrame, &matToDraw);
+		}
+		else
+			NMS(shotsCand,smallFrame);
 		int numOfShotsFound = (int)shotsCand.size();
+		cout << "Num of shots after NMS in frame " << cntFrameNum << " is " << numOfShotsFound << endl;
 		for (int rc = 0; rc < numOfShotsFound; ++rc)
 		{
 			Rect rct = shotsCand[rc].mShRct;
@@ -670,6 +698,7 @@ int main()
 			else
 			{
 				rectangle(smallFrame, rct, Scalar(10, 0, 0), 1);
+				//rectangle(matAdpt, rct, Scalar(128, 0, 0), 1);
 				//cv::imshow("Frame", smallFrame);
 				//cv::waitKey();
 			}
@@ -681,12 +710,12 @@ int main()
 			cv::imshow("PrevFrame", prevFrame);
 		}
 		cv::imshow("firstFrame", firstFrame);
-		//cv::imshow("mapMar", mapMar);
+		//cv::imshow("matAdpt", matAdpt);
 		cv::imshow("Frame", smallFrame);
 		cv::imshow("gradThr", grad8Thr);
 		cv::setMouseCallback("gradThr", mouse_callback, (void*)&grad8Thr);
 		// Press  ESC on keyboard to exit
-		if (1)//cntFrameNum > 680)//isToBreak)//
+		if (1 && !isFromFile)//cntFrameNum > 680)//isToBreak)//
 		{
 			isToBreak = false;
 			char c = (char)cv::waitKey();
