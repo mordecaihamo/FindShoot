@@ -3,6 +3,7 @@
 
 #include "pch.h"
 #include <iostream>
+#include <fstream>
 #include "opencv2/core.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
@@ -159,18 +160,24 @@ int main()
 	String extName = ".MOV";
 	//String fName = "VID-20181125-WA0005";
 	//String extName = ".mp4";
+	ofstream fout;
+	fout.open(dirName + fName + ".csv");
+	
 	String fullFileName = dirName + fName + extName;
 	
 	struct stat buffer;
 	if (stat(fullFileName.c_str(), &buffer) != 0)
 	{
 		cout << fullFileName << " not found!" << endl;
+		fout << fullFileName << " not found!" << endl;
 	}
 	VideoCapture cap(fullFileName);
 	// Check if camera opened successfully
 	if(!cap.isOpened())
 	{
 		cout << "Error opening video stream or file" << endl;
+		fout << "Error opening video stream or file" << endl;
+		fout.close();
 		return -1;
 	}
 	int rot = (int)cap.get(cv::CAP_PROP_MODE);
@@ -264,6 +271,7 @@ int main()
 	Mat target(sz.height, sz.width, CV_8UC1);
 	Rect rectInBound = FindInboundRect(rctMargin, metaData.mPoints);
 	cout << rectInBound.x << "," << rectInBound.y << "," << rectInBound.width << "," << rectInBound.height << "," << map.cols << "," << map.rows << endl;
+	fout << rectInBound.x << "," << rectInBound.y << "," << rectInBound.width << "," << rectInBound.height << "," << map.cols << "," << map.rows << endl;
 	drawPolyRect(target, metaData.mPoints, Scalar(0), -1);
 	Mat firstGrad;
 
@@ -376,7 +384,7 @@ int main()
 	bool isToBreak = false;
 	bool isToSave = false;
 	bool isInspectNms = false;
-	bool isFromFile = true && !isToSave;
+	bool isFromFile = false && !isToSave;
 	int sumX = 0, sumY = 0;
 	while(1)
 	{		
@@ -417,7 +425,7 @@ int main()
 		}
 		else
 		{
-			cntFrameNum = 314;// 1475;// 562;
+			cntFrameNum =  549;//1475;// 547;//445;// 
 			std::stringstream buf;
 			buf << dirName << fName << "/" << cntFrameNum << ".bmp";
 			smallFrame = imread(buf.str());
@@ -463,6 +471,7 @@ int main()
 		int idxMax = -1;
 		int rectAreaMax = 0;
 		Point2f pntCgMax(0, 0);
+		Point pntMov(0, 0);
 		if (numOfContours > 0)
 		{
 			int idx = 0;
@@ -533,13 +542,15 @@ int main()
 			//y = cdsFrame[idxOfLargeInTheArray].mShRct.y - cntrDataFirst[idxOfLargeInTheFirstArray].mShRct.y;
 			x = (int)round(cdsFrame[idxOfLargeInTheArray].mCorners[0].x - cntrDataFirst[idxOfLargeInTheFirstArray].mCorners[0].x);
 			y = (int)round(cdsFrame[idxOfLargeInTheArray].mCorners[0].y - cntrDataFirst[idxOfLargeInTheFirstArray].mCorners[0].y);
-
-			if (abs(x) > 10 || abs(y) > 10)
+			int cgXmov = abs(cdsFrame[idxOfLargeInTheArray].mCg.x - cntrDataFirst[idxOfLargeInTheFirstArray].mCg.x);
+			int cgYmov = abs(cdsFrame[idxOfLargeInTheArray].mCg.y - cntrDataFirst[idxOfLargeInTheFirstArray].mCg.y);
+			if (abs(x) > 10 || abs(y) > 10 || cgXmov > 10 || cgYmov > 10)
 			{
 				cout << "Skipping" << endl;
 				continue;
 			}
-			Point pntMov(x, y);
+			pntMov.x = x;
+			pntMov.y = y;
 			//cdsFrame[idxOfLargeInTheArray].mShRct.x -= x;
 			//cdsFrame[idxOfLargeInTheArray].mShRct.y -= y;
 			cdsFrame[idxOfLargeInTheArray] = cdsFrame[idxOfLargeInTheArray] - pntMov;
@@ -557,7 +568,7 @@ int main()
 				sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
 					cntFrameNum, idx, numOfContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mCg.x, cd.mCg.y, cd.mLen, cd.mRatioFromAll);
 				OutputDebugStringA(buf);
-				if (cntFrameNum == -222)// && idx == 2)// && idxFirst == 7)
+				if (cntFrameNum == -337)// && idx == 2)// && idxFirst == 7)
 				{
 					shot.setTo(0);
 					cv::rectangle(shot, cdsFrame[idxOfLargeInTheArray].mShRct, 255);
@@ -589,7 +600,7 @@ int main()
 						//cv::imshow("grad", grad8Thr);
 						//cv::waitKey();
 						//cout << idxFirst << endl;
-						if (cntFrameNum == -222)// && idx == 2)// && idxFirst == 7)
+						if (cntFrameNum == -337 && idx == 13)// && idxFirst == 7)
 						{
 							shot.setTo(0);
 							//polylines(shot, cdsFrame[idxOfLargeInTheArray].mContour, true, 255, 1, 8);
@@ -676,12 +687,13 @@ int main()
 		}
 		if (isFromFile && isInspectNms)
 		{
-			Mat matToDraw(sz.height, sz.width, CV_8UC1);		NMS(shotsCand, smallFrame, &matToDraw);
+			Mat matToDraw(sz.height, sz.width, CV_8UC1);		NMS(shotsCand, smallFrame, pntMov,&matToDraw);
 		}
 		else
-			NMS(shotsCand,smallFrame);
+			NMS(shotsCand,smallFrame, pntMov);
 		int numOfShotsFound = (int)shotsCand.size();
-		cout << "Num of shots after NMS in frame " << cntFrameNum << " is " << numOfShotsFound << endl;
+		cout << "Num of shots after NMS in frame " << cntFrameNum << " is ," << numOfShotsFound << endl;
+		fout << "Num of shots after NMS in frame " << cntFrameNum << " is ," << numOfShotsFound << endl;
 		for (int rc = 0; rc < numOfShotsFound; ++rc)
 		{
 			Rect rct = shotsCand[rc].mShRct;
@@ -715,7 +727,7 @@ int main()
 		cv::imshow("gradThr", grad8Thr);
 		cv::setMouseCallback("gradThr", mouse_callback, (void*)&grad8Thr);
 		// Press  ESC on keyboard to exit
-		if (1 && !isFromFile)//cntFrameNum > 680)//isToBreak)//
+		if (0 && !isFromFile)//cntFrameNum > 680)//isToBreak)//
 		{
 			isToBreak = false;
 			char c = (char)cv::waitKey();
@@ -732,6 +744,7 @@ int main()
 		cv::imshow("SHOTS", frameRgbDisplayed);
 	cv::waitKey();
 	cv::destroyAllWindows();
+	fout.close();
   // When everything done, release the video capture object
 	cap.release();
     return 0;

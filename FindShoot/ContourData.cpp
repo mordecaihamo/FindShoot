@@ -418,41 +418,41 @@ bool ContourData::CompareContourAndReturnResidu(const ContourData& cdIn, vector<
 	else
 	{
 		//seperate the points in cntr (not found pixels) to groups of contours, s.t. we wont get contours with very far points in them
-		if (len > 10)
-		{
-			vector<vector<Point>> cntrTmp(len);
-			cntrTmp[0].push_back(cntr[0]);
-			for (int p = 1; p < len; ++p)
-			{
-				bool isFound = false;
-				for (int c = 0; c < numOfCntrs; ++c)
-				{
-					int curLen = (int)cntrTmp[c].size();
-					int dx = abs(cntr[p].x - cntrTmp[c][curLen - 1].x);
-					int dy = abs(cntr[p].y - cntrTmp[c][curLen - 1].y);
-					if (dx < minDisBetweenGroups && dy < minDisBetweenGroups)
-					{
-						isFound = true;
-						cntrTmp[c].push_back(cntr[p]);
-						break;
-					}
-				}
-				if (!isFound)//Not found close point, establish new contour
-				{
-					cntrTmp[numOfCntrs].push_back(cntr[p]);
-					++numOfCntrs;
-				}
-			}
-			//Go over the groups of the contours
-			for (int c = 0; c < numOfCntrs; ++c)
-			{//add new contours to check
-				if (cntrTmp[c].size() > 10)
-				{
-					ContourData cdTmp(cntrTmp[c], mPicSize, mFrameNum, mIdxCntr);
-					cdsResidu.push_back(cdTmp);
-				}
-			}
-		}
+		//if (len > 10)
+		//{
+		//	vector<vector<Point>> cntrTmp(len);
+		//	cntrTmp[0].push_back(cntr[0]);
+		//	for (int p = 1; p < len; ++p)
+		//	{
+		//		bool isFound = false;
+		//		for (int c = 0; c < numOfCntrs; ++c)
+		//		{
+		//			int curLen = (int)cntrTmp[c].size();
+		//			int dx = abs(cntr[p].x - cntrTmp[c][curLen - 1].x);
+		//			int dy = abs(cntr[p].y - cntrTmp[c][curLen - 1].y);
+		//			if (dx < minDisBetweenGroups && dy < minDisBetweenGroups)
+		//			{
+		//				isFound = true;
+		//				cntrTmp[c].push_back(cntr[p]);
+		//				break;
+		//			}
+		//		}
+		//		if (!isFound)//Not found close point, establish new contour
+		//		{
+		//			cntrTmp[numOfCntrs].push_back(cntr[p]);
+		//			++numOfCntrs;
+		//		}
+		//	}
+		//	//Go over the groups of the contours
+		//	for (int c = 0; c < numOfCntrs; ++c)
+		//	{//add new contours to check
+		//		if (cntrTmp[c].size() > 10)
+		//		{
+		//			ContourData cdTmp(cntrTmp[c], mPicSize, mFrameNum, mIdxCntr);
+		//			cdsResidu.push_back(cdTmp);
+		//		}
+		//	}
+		//}
 
 		res = true;
 	}

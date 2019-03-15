@@ -8,7 +8,7 @@
 bool IsItShot(ContourData& cd)
 {
 	bool res = false;
-	if (cd.mAvgOutRctColor - cd.mAvgInRctColor > 15 && cd.mAvgInRctColor < 200 && cd.mRatioWh > 0.25 && cd.mShRct.width < 25 && cd.mShRct.height < 25 && cd.mAr>0.01)
+	if (cd.mAvgOutRctColor - cd.mAvgInRctColor > 20 && cd.mAvgInRctColor < 200 && cd.mRatioWh > 0.25 && cd.mShRct.width < 25 && cd.mShRct.height < 25 && cd.mAr>0.01)
 	{
 		//if(	(cd.mAr > 10 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 2 && cd.mShRct.height > 2 && cd.mRatioWh > 0.54) /*||
 		//	(cd.mAr > 25 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 4 && cd.mShRct.height > 4 && cd.mRatioWh > 0.45) ||
@@ -51,12 +51,13 @@ void drawPolyRect(cv::Mat& img, const Point* p, Scalar color, int lineWd)
 }
 
 //Unite small contour near large contour
-void NMS(vector<ContourData>& cntrs, Mat& frameMat, Mat* matToDraw)
+void NMS(vector<ContourData>& cntrs, Mat& frameMat, Point& pntMov, Mat* matToDraw)
 {
+	//pntMov is the movement between this frame and the first frame, if you measure the pixels in the frame, make sure to reduce it from the point
 	int sz = (int)cntrs.size();
 	for (int i = 0; i < (int)cntrs.size(); ++i)
 	{
-		if (1&&matToDraw)
+		if (0&&matToDraw)
 		{
 			cout << "cntr " << i << endl;
 			matToDraw->setTo(0);
@@ -133,8 +134,8 @@ void NMS(vector<ContourData>& cntrs, Mat& frameMat, Mat* matToDraw)
 				}
 				//Add border to avoid entering the holes
 				int border = 5;
-				uniteRect.x = max(uniteRect.x - border, 0);
-				uniteRect.y = max(uniteRect.y - border, 0);
+				uniteRect.x = max(uniteRect.x - border - pntMov.x, 0);
+				uniteRect.y = max(uniteRect.y - border - pntMov.y, 0);
 				if (uniteRect.x + uniteRect.width + 2 * border < frameMat.cols)
 				{
 					uniteRect.width += 2 * border;
@@ -168,11 +169,26 @@ void NMS(vector<ContourData>& cntrs, Mat& frameMat, Mat* matToDraw)
 				}
 
 				Point pi, pj;
-				int offSet = 5;
-				pi.x = max(0,(int)round(cntrs[i].mCg.x - uniteRect.x - offSet+2));
-				pi.y = max(0, (int)round(cntrs[i].mCg.y - uniteRect.y - offSet));
-				pj.x = max(0, (int)round(cntrs[j].mCg.x - uniteRect.x - offSet+2));
-				pj.y = max(0, (int)round(cntrs[j].mCg.y - uniteRect.y - offSet));
+				Rect rctI = cntrs[i].mShRct;
+				Rect rctJ = cntrs[j].mShRct;
+				rctI.x -= pntMov.x;
+				rctI.y -= pntMov.y;
+				rctJ.x -= pntMov.x;
+				rctJ.y -= pntMov.y;
+				Mat matI = frameMat(rctI);
+				Mat matJ = frameMat(rctJ);
+				double mni, mnj, mxi, mxj;
+				minMaxLoc(matI, &mni, &mxi, &pi);
+				minMaxLoc(matJ, &mnj, &mxj, &pj);
+				pi.x += rctI.x - uniteRect.x;
+				pi.y += rctI.y - uniteRect.y;
+				pj.x += rctJ.x - uniteRect.x;
+				pj.y += rctJ.y - uniteRect.y;
+
+				//pi.x = max(0,(int)round(cntrs[i].mCg.x - uniteRect.x - pntMov.x));
+				//pi.y = max(0, (int)round(cntrs[i].mCg.y - uniteRect.y - pntMov.y));
+				//pj.x = max(0, (int)round(cntrs[j].mCg.x - uniteRect.x - pntMov.x));
+				//pj.y = max(0, (int)round(cntrs[j].mCg.y - uniteRect.y - pntMov.y));
 
 				LineIterator lit(uniteMat, pi,pj , 8);
 				vector<uchar> lineVal(lit.count);
@@ -213,13 +229,14 @@ void NMS(vector<ContourData>& cntrs, Mat& frameMat, Mat* matToDraw)
 					rectangle(*matToDraw, uniteRect, Scalar(200), 1);
 					imshow("cntr", *matToDraw);
 					imshow("uniteMat", uniteMat);
-					//imshow("thrMat", thrMat);
+					imshow("frameMat", frameMat);
 					waitKey();
 				}
-				//If the max is at the end or at the start than it is a single shot
-				if(	lit.count < 7 ||
-					!(lineVal[0]>thr || lineVal[0]>200 || lineVal[lit.count-1]>thr || lineVal[lit.count - 1]>200) || 
-					(maxLocation < 0.3*lit.count || maxLocation > 0.7*lit.count || maxValOnLine < thr-10))
+				
+				if(	lit.count <= 8 ||//if they are too close
+					(((lineVal[0] > thr || lineVal[0] > 200)&&(lineVal[lit.count - 1] < thr || lineVal[lit.count - 1] < 200))^//If end is low and start is high
+					((lineVal[0] < thr || lineVal[0] < 200) && (lineVal[lit.count - 1] > thr || lineVal[lit.count - 1] > 200))) ||//If start is low and end is high
+					(maxLocation < 0.3*lit.count || maxLocation >= 0.7*lit.count || maxValOnLine < 0.75*thr))//If the max is at the end or at the start than it is a single shot
 				{
 					vector<Point> u = cntrs[j].mContour;
 					u.insert(u.end(), cntrs[i].mContour.begin(), cntrs[i].mContour.end());

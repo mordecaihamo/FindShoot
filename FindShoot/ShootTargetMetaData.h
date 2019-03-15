@@ -10,7 +10,7 @@ using namespace std;
 void drawPolyRect(cv::Mat& img, const Point* p,Scalar color, int lineWd);
 bool IsItShot(ContourData& cd);
 bool IsItShot(ContourData cd, Mat thrMap);
-void NMS(vector<ContourData>& cntrs, Mat& frameMat, Mat* matToDraw = NULL);
+void NMS(vector<ContourData>& cntrs, Mat& frameMat, Point& pntMov, Mat* matToDraw = NULL);
 
 class ShootTargetMetaData
 {
