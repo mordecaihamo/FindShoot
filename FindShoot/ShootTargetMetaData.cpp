@@ -8,7 +8,7 @@
 bool IsItShot(ContourData& cd)
 {
 	bool res = false;
-	if (cd.mAvgOutRctColor - cd.mAvgInRctColor > 20 && cd.mAvgInRctColor < 200 && cd.mRatioWh > 0.25 && cd.mShRct.width < 25 && cd.mShRct.height < 25 && cd.mAr>0.01)
+	if (cd.mAvgOutRctColor - cd.mAvgInRctColor > 25 && cd.mAvgInRctColor < 175 && cd.mRatioWh > 0.25 && cd.mShRct.width < 25 && cd.mShRct.height < 25)// && cd.mAr>0.01)
 	{
 		//if(	(cd.mAr > 10 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 2 && cd.mShRct.height > 2 && cd.mRatioWh > 0.54) /*||
 		//	(cd.mAr > 25 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 4 && cd.mShRct.height > 4 && cd.mRatioWh > 0.45) ||
@@ -61,11 +61,13 @@ void NMS(vector<ContourData>& cntrs, Mat& frameMat, Point& pntMov, Mat* matToDra
 		{
 			cout << "cntr " << i << endl;
 			matToDraw->setTo(0);
-			polylines(*matToDraw, cntrs[i].mContour, true, 255, 1, 8);
+			ContourData cdi(cntrs[i]);
+			cdi = cdi - pntMov;
+			polylines(*matToDraw, cdi.mContour, true, 255, 1, 8);
 			imshow("NMScntr", *matToDraw);
 			waitKey();
 		}
-		if (cntrs[i].mLen > 35)//too large, find only the small ones
+		if (cntrs[i].mLen > 45)//too large, find only the small ones
 		{
 			continue;
 		}
@@ -80,10 +82,14 @@ void NMS(vector<ContourData>& cntrs, Mat& frameMat, Point& pntMov, Mat* matToDra
 			{
 				cout << "cntr " << i << " and " << j << endl;
 				matToDraw->setTo(0);
-				polylines(*matToDraw, cntrs[i].mContour, true, 255, 1, 8);
-				polylines(*matToDraw, cntrs[j].mContour, true, 128, 1, 8);
+				ContourData cdi(cntrs[i]);
+				cdi = cdi - pntMov;
+				ContourData cdj(cntrs[j]);
+				cdj = cdj - pntMov;
+				polylines(*matToDraw, cdi.mContour, true, 255, 1, 8);
+				polylines(*matToDraw, cdj.mContour, true, 128, 1, 8);
 				imshow("cntr", *matToDraw);
-				if(i==2 /*&& j==2*/)
+				//if(i==2 /*&& j==2*/)
 					waitKey();
 			}
 			int dx = abs(cntrs[i].mCg.x - cntrs[j].mCg.x);
@@ -119,7 +125,7 @@ void NMS(vector<ContourData>& cntrs, Mat& frameMat, Point& pntMov, Mat* matToDra
 				minDisCntr = minDisPoint;
 				minDisCntrIdx = j;
 			}
-			if (minDisPoint <= 15)//unite if the distance is small
+			if (minDisPoint <= 20)//unite if the distance is small
 			{
 				Rect uniteRect = cntrs[i].mShRct;
 				uniteRect.x = min(uniteRect.x, cntrs[j].mShRct.x);
@@ -224,8 +230,14 @@ void NMS(vector<ContourData>& cntrs, Mat& frameMat, Point& pntMov, Mat* matToDra
 				{
 					cout << "cntr " << i << " and " << j << endl;
 					matToDraw->setTo(0);
-					polylines(*matToDraw, cntrs[i].mContour, true, 255, 1, 8);
-					polylines(*matToDraw, cntrs[j].mContour, true, 128, 1, 8);
+					ContourData cdi(cntrs[i]);
+					cdi = cdi-pntMov;
+					ContourData cdj(cntrs[j]);
+					cdj = cdj - pntMov;
+					polylines(*matToDraw, cdi.mContour, true, 255, 1, 8);
+					polylines(*matToDraw, cdj.mContour, true, 128, 1, 8);
+					uniteRect.x -= pntMov.x;
+					uniteRect.y -= pntMov.y;
 					rectangle(*matToDraw, uniteRect, Scalar(200), 1);
 					imshow("cntr", *matToDraw);
 					imshow("uniteMat", uniteMat);
@@ -233,7 +245,7 @@ void NMS(vector<ContourData>& cntrs, Mat& frameMat, Point& pntMov, Mat* matToDra
 					waitKey();
 				}
 				
-				if(	lit.count <= 8 ||//if they are too close
+				if(	lit.count < 8 ||//if they are too close
 					(((lineVal[0] > thr || lineVal[0] > 200)&&(lineVal[lit.count - 1] < thr || lineVal[lit.count - 1] < 200))^//If end is low and start is high
 					((lineVal[0] < thr || lineVal[0] < 200) && (lineVal[lit.count - 1] > thr || lineVal[lit.count - 1] > 200))) ||//If start is low and end is high
 					(maxLocation < 0.3*lit.count || maxLocation >= 0.7*lit.count || maxValOnLine < 0.75*thr))//If the max is at the end or at the start than it is a single shot

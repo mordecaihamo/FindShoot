@@ -70,7 +70,7 @@ void CalcAverageRectInOutColor(Mat& img, ContourData& cd)
 }
 
 
-const float  ContourData::mMatchThr = 0.51f;
+const float  ContourData::mMatchThr = 0.49f;
 
 void CopyContourData(ContourData& dest, const ContourData& src)
 {

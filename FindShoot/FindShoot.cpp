@@ -377,14 +377,14 @@ int main()
 	Mat frameRgbDisplayed;
 	cv::imshow("gradFirst", firstGrad);
 	shot.setTo(0);
-	double measureSharpnessThr = 350.0f;
+	double measureSharpnessThr = 400.0f;// 350.0f;
 	vector<Rect> foundShotRects;
 	vector<Scalar> colors;
 	vector<ContourData> shotsCand;
 	bool isToBreak = false;
 	bool isToSave = false;
 	bool isInspectNms = false;
-	bool isFromFile = false && !isToSave;
+	bool isFromFile = true && !isToSave;
 	int sumX = 0, sumY = 0;
 	while(1)
 	{		
@@ -425,14 +425,15 @@ int main()
 		}
 		else
 		{
-			cntFrameNum =  549;//1475;// 547;//445;// 
+			cntFrameNum =  439;//1475;// 547;//445;// 
 			std::stringstream buf;
 			buf << dirName << fName << "/" << cntFrameNum << ".bmp";
 			smallFrame = imread(buf.str());
 			cvtColor(smallFrame, smallFrame, COLOR_BGR2GRAY);
 		}
 		//Erosion(smallFrame, smallFrame, 1, MORPH_CROSS);
-		Canny(smallFrame, grad8Thr, thrOfGrad, 2 * thrOfGrad);
+		Canny(smallFrame, grad8Thr, thrOfGrad, 1.75 * thrOfGrad);
+		//cv::imshow("gradThrBeforeClean", grad8Thr);
 		//threshold(smallFrame, matAdpt, thr, 255, THRESH_BINARY);
 		Mat matDx, matDy;
 		Sobel(smallFrame, matDx, CV_16S, 1, 0);
@@ -568,7 +569,7 @@ int main()
 				sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
 					cntFrameNum, idx, numOfContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mCg.x, cd.mCg.y, cd.mLen, cd.mRatioFromAll);
 				OutputDebugStringA(buf);
-				if (cntFrameNum == -337)// && idx == 2)// && idxFirst == 7)
+				if (cntFrameNum == -108)// && idx == 2)// && idxFirst == 7)
 				{
 					shot.setTo(0);
 					cv::rectangle(shot, cdsFrame[idxOfLargeInTheArray].mShRct, 255);
@@ -600,7 +601,7 @@ int main()
 						//cv::imshow("grad", grad8Thr);
 						//cv::waitKey();
 						//cout << idxFirst << endl;
-						if (cntFrameNum == -337 && idx == 13)// && idxFirst == 7)
+						if (cntFrameNum == -859 && idx == 30 && idxFirst == 4)
 						{
 							shot.setTo(0);
 							//polylines(shot, cdsFrame[idxOfLargeInTheArray].mContour, true, 255, 1, 8);
@@ -719,9 +720,9 @@ int main()
 		{
 			frameRgb.copyTo(frameRgbDisplayed);
 			cv::imshow("SHOTS", frameRgbDisplayed);
-			cv::imshow("PrevFrame", prevFrame);
+			//cv::imshow("PrevFrame", prevFrame);
 		}
-		cv::imshow("firstFrame", firstFrame);
+		//cv::imshow("firstFrame", firstFrame);
 		//cv::imshow("matAdpt", matAdpt);
 		cv::imshow("Frame", smallFrame);
 		cv::imshow("gradThr", grad8Thr);
