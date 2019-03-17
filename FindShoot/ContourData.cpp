@@ -21,7 +21,7 @@ void CalcAverageBorderColor(Mat& img, ContourData& cd)
 
 void CalcAverageRectInOutColor(Mat& img, ContourData& cd)
 {
-	if (cd.mLen == 0 || cd.mShRct.height<3 || cd.mShRct.width<3)
+	if (cd.mLen == 0 || cd.mShRct.height<2 || cd.mShRct.width<2)
 	{
 		return;
 	}

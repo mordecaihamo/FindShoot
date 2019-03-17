@@ -384,7 +384,10 @@ int main()
 	bool isToBreak = false;
 	bool isToSave = false;
 	bool isInspectNms = false;
-	bool isFromFile = true && !isToSave;
+	bool isFromFile = false && !isToSave;
+//	isInspectNms = true;
+	//isFromFile = true && !isToSave;
+
 	int sumX = 0, sumY = 0;
 	while(1)
 	{		
@@ -425,7 +428,7 @@ int main()
 		}
 		else
 		{
-			cntFrameNum =  439;//1475;// 547;//445;// 
+			cntFrameNum =  741;//1475;// 547;//445;// 
 			std::stringstream buf;
 			buf << dirName << fName << "/" << cntFrameNum << ".bmp";
 			smallFrame = imread(buf.str());
@@ -483,22 +486,21 @@ int main()
 //			for (; idx >= 0; idx=hierarchy[idx][0])
 			while(idx>=0)
 			{
-				if (contours[idx].size() > 9)
+				if (contours[idx].size() > 7)
 				{
 					ContourData cd(contours[idx], sz);
-					CalcAverageBorderColor(smallFrame, cd);
 					if (cd.mShRct.width == 0 || cd.mShRct.height == 0)
 						continue;
 					//shot.setTo(0);
 					//polylines(shot, cd.mContour, true, 255, 1, 8);
 					//cv::setMouseCallback("shot", mouse_callback, &metaData);
 					//cv::imshow("cntr", shot);
-					//cv::imshow("grad", grad8Thr);
 					//cv::waitKey();
 					//char buf[256] = { '\0' };
 					//sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
 					//	cntFrameNum, idx, numOfContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mCg.x, cd.mCg.y, cd.mLen, cd.mRatioFromAll);
 					//OutputDebugStringA(buf);
+					CalcAverageBorderColor(smallFrame, cd);
 					if (cd.mLen > rectAreaMax)
 					{
 						rectAreaMax = cd.mLen;
@@ -512,7 +514,7 @@ int main()
 					//	--idx;
 					//	numOfContours--;
 					//}
-					if (cd.mLen >= 10)
+					if (cd.mLen >= 8)
 						cdsFrame.push_back(cd);
 				}
 				if(idx < 0)
@@ -569,7 +571,7 @@ int main()
 				sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
 					cntFrameNum, idx, numOfContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mCg.x, cd.mCg.y, cd.mLen, cd.mRatioFromAll);
 				OutputDebugStringA(buf);
-				if (cntFrameNum == -108)// && idx == 2)// && idxFirst == 7)
+				if (0 || cntFrameNum == -108)// && idx == 2)// && idxFirst == 7)
 				{
 					shot.setTo(0);
 					cv::rectangle(shot, cdsFrame[idxOfLargeInTheArray].mShRct, 255);
@@ -580,7 +582,8 @@ int main()
 					circle(shot, cdsFrame[idxOfLargeInTheArray].mCg, 3, 255);
 					circle(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mCg, 3, 128);
 					cv::imshow("cntrIn", shot);
-					cv::imshow("Frame", smallFrame);
+					cv::imshow("Frame", smallFrame); 
+					cv::imshow("grad8Thr", grad8Thr);
 					cv::waitKey();
 				}
 				if (IsItShot(cd))
