@@ -246,10 +246,11 @@ void NMS(vector<ContourData>& cntrs, Mat& frameMat, Point& pntMov, Mat* matToDra
 					waitKey();
 				}
 				
-				if(	lit.count < 8 ||//if they are too close
+				if(	lit.count <= 6 ||
+					(lit.count > 6 && lit.count < 8 && maxValOnLine < 0.75*thr) ||//if they are too close
 					(((lineVal[0] > thr || lineVal[0] > 200)&&(lineVal[lit.count - 1] < thr || lineVal[lit.count - 1] < 200))^//If end is low and start is high
 					((lineVal[0] < thr || lineVal[0] < 200) && (lineVal[lit.count - 1] > thr || lineVal[lit.count - 1] > 200))) ||//If start is low and end is high
-					(maxLocation < 0.3*lit.count || maxLocation >= 0.7*lit.count || maxValOnLine < 0.75*thr))//If the max is at the end or at the start than it is a single shot
+					(lit.count >= 8 && (maxLocation < 0.3*lit.count || maxLocation >= 0.7*lit.count || maxValOnLine < 0.75*thr)))//If the max is at the end or at the start than it is a single shot
 				{
 					vector<Point> u = cntrs[j].mContour;
 					u.insert(u.end(), cntrs[i].mContour.begin(), cntrs[i].mContour.end());

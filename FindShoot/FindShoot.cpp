@@ -385,7 +385,7 @@ int main()
 	bool isToSave = false;
 	bool isInspectNms = false;
 	bool isFromFile = false && !isToSave;
-//	isInspectNms = true;
+	//isInspectNms = true;
 	//isFromFile = true && !isToSave;
 
 	int sumX = 0, sumY = 0;
@@ -428,7 +428,7 @@ int main()
 		}
 		else
 		{
-			cntFrameNum =  741;//1475;// 547;//445;// 
+			cntFrameNum =  1103;//1475;// 547;//445;// 
 			std::stringstream buf;
 			buf << dirName << fName << "/" << cntFrameNum << ".bmp";
 			smallFrame = imread(buf.str());
