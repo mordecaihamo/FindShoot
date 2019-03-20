@@ -428,7 +428,7 @@ int main()
 		}
 		else
 		{
-			cntFrameNum =  1103;//1475;// 547;//445;// 
+			cntFrameNum =  1475;//439;// 547;//445;// 
 			std::stringstream buf;
 			buf << dirName << fName << "/" << cntFrameNum << ".bmp";
 			smallFrame = imread(buf.str());
@@ -571,7 +571,7 @@ int main()
 				sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
 					cntFrameNum, idx, numOfContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mCg.x, cd.mCg.y, cd.mLen, cd.mRatioFromAll);
 				OutputDebugStringA(buf);
-				if (0 || cntFrameNum == -108)// && idx == 2)// && idxFirst == 7)
+				if (0|| cntFrameNum == -108)// && idx == 2)// && idxFirst == 7)
 				{
 					shot.setTo(0);
 					cv::rectangle(shot, cdsFrame[idxOfLargeInTheArray].mShRct, 255);

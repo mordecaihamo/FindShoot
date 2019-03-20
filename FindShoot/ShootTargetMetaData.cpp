@@ -8,7 +8,7 @@
 bool IsItShot(ContourData& cd)
 {
 	bool res = false;
-	if (cd.mAvgOutRctColor - cd.mAvgInRctColor > 24 && cd.mAvgInRctColor < 175 && cd.mRatioWh > 0.25 && cd.mShRct.width < 25 && cd.mShRct.height < 25)// && cd.mAr>0.01)
+	if (cd.mAvgOutRctColor - cd.mAvgInRctColor > 10 && cd.mAvgInRctColor < 175 && cd.mRatioWh > 0.25 && cd.mShRct.width < 25 && cd.mShRct.height < 25)// && cd.mAr>0.01)
 	{
 		//if(	(cd.mAr > 10 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 2 && cd.mShRct.height > 2 && cd.mRatioWh > 0.54) /*||
 		//	(cd.mAr > 25 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 4 && cd.mShRct.height > 4 && cd.mRatioWh > 0.45) ||

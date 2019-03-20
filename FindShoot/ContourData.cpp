@@ -48,25 +48,57 @@ void CalcAverageRectInOutColor(Mat& img, ContourData& cd)
 	cd.mAvgOutRctColor += img.at<uchar>(outRct.y + outRct.height - 1, outRct.x + outRct.width - 1);
 	cd.mAvgOutRctColor += img.at<uchar>(outRct.y + outRct.height - 1, outRct.x);
 	cd.mAvgOutRctColor *= 0.25;
+	//cd.mAvgOutRctColor = (float)img.at<uchar>(outRct.y, outRct.x);
+	//cd.mAvgOutRctColor = min(cd.mAvgOutRctColor, (float)img.at<uchar>(outRct.y, outRct.x + outRct.width - 1));
+	//cd.mAvgOutRctColor = min(cd.mAvgOutRctColor, (float)img.at<uchar>(outRct.y + outRct.height - 1, outRct.x + outRct.width - 1));
+	//cd.mAvgOutRctColor = min(cd.mAvgOutRctColor, (float)img.at<uchar>(outRct.y + outRct.height - 1, outRct.x));
+	
 
 	double mn, mx;
 	Point mnLoc, mxLoc;
+	if (outRct.width <= 4)
+	{
+		inRct.x = min(outRct.x + 1, img.cols - 1);
+		inRct.width = max(1, inRct.width - 1);
+	}
+	else
+	{
+		inRct.x = outRct.x + 2;
+		inRct.width = max(1, inRct.width - 2);
+	}
+	if (outRct.height <= 4)
+	{
+		inRct.y = min(outRct.y + 1, img.rows - 1);
+		inRct.height = max(1, inRct.height - 1);
+	}
+	else
+	{
+		inRct.y = outRct.y + 2;
+		inRct.height = max(1, inRct.height - 2);
+	}
+	if (0)
+	{
+		Mat shot;
+		img.copyTo(shot);
+		cv::rectangle(shot, outRct, 255);
+		cv::rectangle(shot, inRct, 128);
+		cv::imshow("cntrIn", shot);
+		cv::waitKey();
+	}
 	Mat imgInRct = img(inRct);
-	inRct.x = min(outRct.x + 1, img.cols - 1);
-	inRct.y = min(outRct.y + 1, img.rows - 1);
-	inRct.width = inRct.width - 1;
-	inRct.height = inRct.height - 1;
+	//cd.mAvgInRctColor = mean(imgInRct).val[0];
 	minMaxLoc(imgInRct, &mn, &mx, &mnLoc, &mxLoc);
-	inRct.x += mnLoc.x;
-	inRct.y += mnLoc.y;
-	inRct.width = 2;
-	inRct.height = 2;
+	cd.mAvgInRctColor = mn;
+	//inRct.x += mnLoc.x;
+	//inRct.y += mnLoc.y;
+	//inRct.width = 2;
+	//inRct.height = 2;
 
-	cd.mAvgInRctColor += mn;// img.at<uchar>(inRct.y, inRct.x);
-	cd.mAvgInRctColor += img.at<uchar>(inRct.y, inRct.x + 1);
-	cd.mAvgInRctColor += img.at<uchar>(inRct.y + 1, inRct.x + 1);
-	cd.mAvgInRctColor += img.at<uchar>(inRct.y + 1, inRct.x);
-	cd.mAvgInRctColor *= 0.25;
+	//cd.mAvgInRctColor += img.at<uchar>(inRct.y, inRct.x);
+	//cd.mAvgInRctColor += img.at<uchar>(inRct.y, inRct.x + 1);
+	//cd.mAvgInRctColor += img.at<uchar>(inRct.y + 1, inRct.x + 1);
+	//cd.mAvgInRctColor += img.at<uchar>(inRct.y + 1, inRct.x);
+	//cd.mAvgInRctColor *= 0.25;
 }
 
 
