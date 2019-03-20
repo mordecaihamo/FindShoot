@@ -428,7 +428,7 @@ int main()
 		}
 		else
 		{
-			cntFrameNum = 841;// 834;// 788;// 1475;
+			cntFrameNum = 788;// 841;// 834;// 1475;
 			std::stringstream buf;
 			buf << dirName << fName << "/" << cntFrameNum << ".bmp";
 			smallFrame = imread(buf.str());
@@ -482,11 +482,9 @@ int main()
 			double arMax = 0;
 			vector<ContourData> cdsFrame;
 			int idxOfLargeInTheArray = -1;
-			//Going only with the outer contours
-//			for (; idx >= 0; idx=hierarchy[idx][0])
 			while(idx>=0)
 			{
-				if (contours[idx].size() > 7)
+				if (contours[idx].size() > 6)
 				{
 					ContourData cd(contours[idx], sz);
 					if (cd.mShRct.width == 0 || cd.mShRct.height == 0)
@@ -514,8 +512,8 @@ int main()
 					//	--idx;
 					//	numOfContours--;
 					//}
-					if (cd.mLen >= 8)
-						cdsFrame.push_back(cd);
+					//if (cd.mLen >= 7)
+					cdsFrame.push_back(cd);
 				}
 				if(idx < 0)
 					break;
