@@ -428,7 +428,7 @@ int main()
 		}
 		else
 		{
-			cntFrameNum =  1475;//439;// 547;//445;// 
+			cntFrameNum = 841;// 834;// 788;// 1475;
 			std::stringstream buf;
 			buf << dirName << fName << "/" << cntFrameNum << ".bmp";
 			smallFrame = imread(buf.str());
