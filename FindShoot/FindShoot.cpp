@@ -291,11 +291,11 @@ int main()
 	Mat shot = map.clone();
 	//Mat mapMar(map, rctMargin);
 	Mat targetMar(target, rctMargin);
-	int thrOfGrad = 70;
+	int thrOfGrad = 77;
 	double thr = 128 + 7;
 	int maxGrayLevelAllowed = 150;
 //#undef min	cv::min(firstFrame, maxGrayLevelAllowed, firstFrame);
-	Canny(firstFrame, firstGrad, thrOfGrad, 3 * thrOfGrad);
+	Canny(firstFrame, firstGrad, thrOfGrad, 2.75 * thrOfGrad);
 	firstGrad.setTo(0, map);
 	bool isWithDilate = false;
 	if (isWithDilate)
@@ -428,7 +428,7 @@ int main()
 		}
 		else
 		{
-			cntFrameNum = 788;// 841;// 834;// 1475;
+			cntFrameNum = 175;//742;// //788;// 841;//  1475;
 			std::stringstream buf;
 			buf << dirName << fName << "/" << cntFrameNum << ".bmp";
 			smallFrame = imread(buf.str());
