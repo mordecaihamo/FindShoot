@@ -11,9 +11,16 @@ void CalcAverageBorderColor(Mat& img, ContourData& cd)
 		return;
 	}
 	cd.mAvgBorderColor = 0;
+	cd.mMinBorderColor = INT16_MAX;
+	cd.mMaxBorderColor = 0;
 	for (Point p : cd.mContour)
 	{
-		cd.mAvgBorderColor += img.at<uchar>(p.y, p.x);
+		int val = img.at<uchar>(p.y, p.x);
+		cd.mAvgBorderColor += val;
+		if (val < cd.mMinBorderColor)
+			cd.mMinBorderColor = val;
+		if (val > cd.mMaxBorderColor)
+			cd.mMaxBorderColor = val;
 	}
 	
 	cd.mAvgBorderColor /= cd.mLen;
@@ -39,9 +46,19 @@ void CalcAverageRectInOutColor(Mat& img, ContourData& cd)
 	{
 		++outRct.width;
 	}
+	else
+	{
+		outRct.width = img.cols - outRct.width;
+		inRct.width = outRct.width;
+	}
 	if (outRct.y + outRct.height + 1 < img.rows)
 	{
 		++outRct.height;
+	}
+	else
+	{
+		outRct.height = img.rows - outRct.y;
+		inRct.height = outRct.height;
 	}
 	cd.mAvgOutRctColor += img.at<uchar>(outRct.y, outRct.x);
 	cd.mAvgOutRctColor += img.at<uchar>(outRct.y, outRct.x + outRct.width - 1);
@@ -123,6 +140,8 @@ void CopyContourData(ContourData& dest, const ContourData& src)
 	dest.mAvgBorderColor = src.mAvgBorderColor;
 	dest.mAvgOutRctColor = src.mAvgOutRctColor;
 	dest.mAvgInRctColor = src.mAvgInRctColor;
+	dest.mMinBorderColor = src.mMinBorderColor;
+	dest.mMaxBorderColor = src.mMaxBorderColor;
 }
 
 double AucDisSqr(const cv::Point& p1, const cv::Point& p2)
@@ -158,7 +177,8 @@ ContourData::ContourData(void)
 	mAvgBorderColor = -1;
 	mAvgOutRctColor = -1;
 	mAvgInRctColor = -1;
-
+	mMinBorderColor = -1;
+	mMaxBorderColor = -1;
 }
 
 ContourData::ContourData(const ContourData& cdIn)

@@ -156,10 +156,12 @@ int main()
 	using namespace cv;
 	bool toDisplay = false;
 	String dirName = "C:/moti/FindShoot/";
-	String fName = "MVI_3";
-	String extName = ".MOV";
-	//String fName = "VID-20181125-WA0005";
-	//String extName = ".mp4";
+	String fName = "MVI_3";	String extName = ".MOV";
+	//String fName = "MVI_4"; String extName = ".MOV";
+	//String fName = "MVI_1"; String extName = ".MOV";
+	//String fName = "MVI_2"; String extName = ".MOV";
+	//String fName = "VID-20181125-WA0005"; String extName = ".mp4"; very bad video
+
 	ofstream fout;
 	fout.open(dirName + fName + ".csv");
 	
@@ -298,7 +300,7 @@ int main()
 	Canny(firstFrame, firstGrad, thrOfGrad, 2.75 * thrOfGrad);
 	firstGrad.setTo(0, map);
 	bool isWithDilate = false;
-	if (isWithDilate)
+	//if (isWithDilate)
 	{
 		Dilation(firstGrad, firstGrad, 1);
 		Erosion(firstGrad, firstGrad, 1);
@@ -386,7 +388,7 @@ int main()
 	bool isInspectNms = false;
 	bool isFromFile = false && !isToSave;
 	//isInspectNms = true;
-	//isFromFile = true && !isToSave;
+	isFromFile = true && !isToSave;
 
 	int sumX = 0, sumY = 0;
 	while(1)
@@ -428,14 +430,17 @@ int main()
 		}
 		else
 		{
-			cntFrameNum = 175;//742;// //788;// 841;//  1475;
+			cntFrameNum = 1470; //940;//742;// //788;// 841;//  
 			std::stringstream buf;
 			buf << dirName << fName << "/" << cntFrameNum << ".bmp";
 			smallFrame = imread(buf.str());
 			cvtColor(smallFrame, smallFrame, COLOR_BGR2GRAY);
 		}
 		//Erosion(smallFrame, smallFrame, 1, MORPH_CROSS);
-		Canny(smallFrame, grad8Thr, thrOfGrad, 1.75 * thrOfGrad);
+		adaptiveThreshold(smallFrame, matAdpt, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, (((int)floor(1.1*sz.width)) | 1), 0);
+		cv::imshow("matAdptBeforeClean", matAdpt);
+		Canny(matAdpt, grad8Thr, 0, 255,5,true);
+		//Canny(smallFrame, grad8Thr, thrOfGrad, 1.75 * thrOfGrad, 3, true);
 		//cv::imshow("gradThrBeforeClean", grad8Thr);
 		//threshold(smallFrame, matAdpt, thr, 255, THRESH_BINARY);
 		Mat matDx, matDy;
@@ -450,11 +455,11 @@ int main()
 		if (sharpMeasure < measureSharpnessThr)
 		{
 			cout << "Skipping " << cntFrameNum << " Blured frame " << sharpMeasure << endl;
-			continue;//Blured image
+			//continue;//Blured image
 		}
 			
-		//adaptiveThreshold(smallFrame, matAdpt, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, (sz.width|1) - 2, 0);
-		//matAdpt.setTo(0, map);
+		
+		matAdpt.setTo(0, map);
 		grad8Thr.setTo(0, map);
 		if (isWithDilate)
 		{
@@ -484,7 +489,7 @@ int main()
 			int idxOfLargeInTheArray = -1;
 			while(idx>=0)
 			{
-				if (contours[idx].size() > 6)
+				if (contours[idx].size() > 3)
 				{
 					ContourData cd(contours[idx], sz);
 					if (cd.mShRct.width == 0 || cd.mShRct.height == 0)
@@ -526,7 +531,7 @@ int main()
 				//cv::imshow("gradThr", grad8Thr);
 				//cv::imshow("skipping", frameRgb);
 				//cv::waitKey();
-				continue;
+				//continue;
 			}
 			//If the contour is repeating itself from the inside, return the inside contour
 			vector<Point> rpt = cdsFrame[idxOfLargeInTheArray].FixSlightlyOpenContour();
@@ -548,13 +553,13 @@ int main()
 			if (abs(x) > 10 || abs(y) > 10 || cgXmov > 10 || cgYmov > 10)
 			{
 				cout << "Skipping" << endl;
-				continue;
+				//continue;
 			}
 			pntMov.x = x;
 			pntMov.y = y;
 			//cdsFrame[idxOfLargeInTheArray].mShRct.x -= x;
 			//cdsFrame[idxOfLargeInTheArray].mShRct.y -= y;
-			cdsFrame[idxOfLargeInTheArray] = cdsFrame[idxOfLargeInTheArray] - pntMov;
+			//cdsFrame[idxOfLargeInTheArray] = cdsFrame[idxOfLargeInTheArray] - pntMov;
 			for (idx=0; idx < (int)cdsFrame.size(); idx++)
 			{
 				cdsFrame[idx].mFrameNum = cntFrameNum;
@@ -579,6 +584,7 @@ int main()
 					polylines(shot, cd.mContour, true, 255, 1, 8);
 					circle(shot, cdsFrame[idxOfLargeInTheArray].mCg, 3, 255);
 					circle(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mCg, 3, 128);
+					cv::imshow("matAdpt", matAdpt);
 					cv::imshow("cntrIn", shot);
 					cv::imshow("Frame", smallFrame); 
 					cv::imshow("grad8Thr", grad8Thr);
@@ -663,7 +669,7 @@ int main()
 					}
 					if (!isFound && cd.mLen<200)
 					{						
-						cd = cd + pntMov;
+						//cd = cd + pntMov;
 						shotsCand.push_back(cd);
 						//cntrDataFirst.push_back(cd);
 						shot.setTo(0);
@@ -687,20 +693,20 @@ int main()
 				}
 			}
 		}
-		if (isFromFile && isInspectNms)
-		{
-			Mat matToDraw(sz.height, sz.width, CV_8UC1);		NMS(shotsCand, smallFrame, pntMov,&matToDraw);
-		}
-		else
-			NMS(shotsCand,smallFrame, pntMov);
+		//if (isFromFile && isInspectNms)
+		//{
+		//	Mat matToDraw(sz.height, sz.width, CV_8UC1);		NMS(shotsCand, smallFrame, pntMov,&matToDraw);
+		//}
+		//else
+		//	NMS(shotsCand,smallFrame, pntMov);
 		int numOfShotsFound = (int)shotsCand.size();
 		cout << "Num of shots after NMS in frame " << cntFrameNum << " is ," << numOfShotsFound << endl;
 		fout << "Num of shots after NMS in frame " << cntFrameNum << " is ," << numOfShotsFound << endl;
 		for (int rc = 0; rc < numOfShotsFound; ++rc)
 		{
 			Rect rct = shotsCand[rc].mShRct;
-			rct.x -= x;
-			rct.y -= y;
+			//rct.x -= x;
+			//rct.y -= y;
 			//rectangle(frameRgb, rct, colors[rc], 2);
 			if (!isFromFile)
 			{
@@ -723,8 +729,8 @@ int main()
 			cv::imshow("SHOTS", frameRgbDisplayed);
 			//cv::imshow("PrevFrame", prevFrame);
 		}
-		//cv::imshow("firstFrame", firstFrame);
-		//cv::imshow("matAdpt", matAdpt);
+		cv::imshow("firstFrame", firstFrame);
+		cv::imshow("matAdpt", matAdpt);
 		cv::imshow("Frame", smallFrame);
 		cv::imshow("gradThr", grad8Thr);
 		cv::setMouseCallback("gradThr", mouse_callback, (void*)&grad8Thr);

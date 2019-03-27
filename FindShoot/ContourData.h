@@ -42,6 +42,8 @@ public:
 	vector<Point> mDistFromLargeCorners;
 	Point mDistToCenterOfLarge;
 	float mAvgBorderColor;
+	int mMinBorderColor;
+	int mMaxBorderColor;
 	float mAvgOutRctColor;
 	float mAvgInRctColor;
 };
