@@ -386,7 +386,7 @@ vector<Point> ContourData::FixSlightlyOpenContour()
 	return rpt;
 }
 
-bool ContourData::CompareContourAndReturnResidu(const ContourData& cdIn, vector<ContourData>& cdsResidu, Mat* thrMatP/*=NULL*/)
+bool ContourData::CompareContourAndReturnResidu(const ContourData& cdIn, vector<ContourData>& cdsResidu, Point* movePnt/* = NULL*/)
 {
 	bool prnt = false;
 	bool res = false;
@@ -398,8 +398,18 @@ bool ContourData::CompareContourAndReturnResidu(const ContourData& cdIn, vector<
 	int m = 0, o = 0;
 	int numOfFoundPix = 0;
 	int minDis = 3;
-	int xMov = mDistToCenterOfLarge.x - cdIn.mDistToCenterOfLarge.x;
-	int yMov = mDistToCenterOfLarge.y - cdIn.mDistToCenterOfLarge.y;
+	int xMov;
+	int yMov;
+	if (!movePnt)
+	{
+		xMov = mDistToCenterOfLarge.x - cdIn.mDistToCenterOfLarge.x;
+		yMov = mDistToCenterOfLarge.y - cdIn.mDistToCenterOfLarge.y;
+	}
+	else
+	{
+		xMov = movePnt->x;
+		yMov = movePnt->y;
+	}
 	if (abs(xMov) > 120 || abs(yMov) > 120)
 	{
 		return res;

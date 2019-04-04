@@ -255,7 +255,7 @@ int main()
 	int selectedCh = 0;
 	int maxDiff = 0;
 	double mn, mx;
-
+	
 	cvtColor(smallFrame, firstFrame, COLOR_BGR2GRAY);
 	drawPolyRect(smallFrame, metaData.mPoints, Scalar(255, 0, 17), 1);
 	//cv::imshow("TargetOnFrame", smallFrame);
@@ -276,7 +276,7 @@ int main()
 	fout << rectInBound.x << "," << rectInBound.y << "," << rectInBound.width << "," << rectInBound.height << "," << map.cols << "," << map.rows << endl;
 	drawPolyRect(target, metaData.mPoints, Scalar(0), -1);
 	Mat firstGrad;
-
+	
 	Mat mapNot;
 	bitwise_not(map, mapNot);
 
@@ -289,13 +289,18 @@ int main()
 	cv::threshold(target, target, 1, 255, THRESH_BINARY);
 	
 	Mat shiftMap = map(Rect(1, 1, sz.width - 1, sz.height - 1));
+	
 	rectangle(target, rectInBound, Scalar(100));
+	
 	Mat shot = map.clone();
 	//Mat mapMar(map, rctMargin);
-	Mat targetMar(target, rctMargin);
+	cout << 3 << endl;
+	//Mat targetMar(target, rctMargin);
+	cout << 2 << endl;
 	int thrOfGrad = 77;
 	double thr = 128 + 7;
 	int maxGrayLevelAllowed = 150;
+	cout << 1 << endl;
 //#undef min	cv::min(firstFrame, maxGrayLevelAllowed, firstFrame);
 	Canny(firstFrame, firstGrad, thrOfGrad, 2.75 * thrOfGrad);
 	firstGrad.setTo(0, map);
@@ -305,6 +310,7 @@ int main()
 		Dilation(firstGrad, firstGrad, 1);
 		Erosion(firstGrad, firstGrad, 1);
 	}
+	
 	//cv::imshow("firstFrame", firstFrame);
 	//cv::imshow("firstGrad", firstGrad);
 	//cv::waitKey();
@@ -373,8 +379,7 @@ int main()
 	}
 
 	Mat grad8Thr, matAdpt(sz.height, sz.width, CV_8UC1);
-	Mat firstGradMar, grag8ThrMar;
-	firstGradMar = firstGrad(rctMargin);
+	//Mat grag8ThrMar;
 	Mat frameRgb;
 	Mat frameRgbDisplayed;
 	cv::imshow("gradFirst", firstGrad);
@@ -388,7 +393,7 @@ int main()
 	bool isInspectNms = false;
 	bool isFromFile = false && !isToSave;
 	//isInspectNms = true;
-	isFromFile = true && !isToSave;
+	//isFromFile = true && !isToSave;
 
 	int sumX = 0, sumY = 0;
 	while(1)
@@ -430,24 +435,38 @@ int main()
 		}
 		else
 		{
-			cntFrameNum = 1470; //940;//742;// //788;// 841;//  
+			cntFrameNum = 256; //940;//742;// //788;// 841;//  
 			std::stringstream buf;
 			buf << dirName << fName << "/" << cntFrameNum << ".bmp";
 			smallFrame = imread(buf.str());
 			cvtColor(smallFrame, smallFrame, COLOR_BGR2GRAY);
 		}
+		int x = 0, y = 0;
+		FindMovment(firstFrame, smallFrame, x, y, rectInBound, look,false,false);
+		Point pntMov(x, y);
 		//Erosion(smallFrame, smallFrame, 1, MORPH_CROSS);
 		adaptiveThreshold(smallFrame, matAdpt, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, (((int)floor(1.1*sz.width)) | 1), 0);
 		cv::imshow("matAdptBeforeClean", matAdpt);
 		Canny(matAdpt, grad8Thr, 0, 255,5,true);
-		//Canny(smallFrame, grad8Thr, thrOfGrad, 1.75 * thrOfGrad, 3, true);
+		Mat canMat;
+		Canny(smallFrame, canMat, thrOfGrad, 1.75 * thrOfGrad, 3, true);
 		//cv::imshow("gradThrBeforeClean", grad8Thr);
 		//threshold(smallFrame, matAdpt, thr, 255, THRESH_BINARY);
 		Mat matDx, matDy;
 		Sobel(smallFrame, matDx, CV_16S, 1, 0);
 		Sobel(smallFrame, matDy, CV_16S, 0, 1);
-		matDx.setTo(0, map);
-		matDy.setTo(0, map);
+		Mat mapMove(sz.height, sz.width, CV_8UC1);
+		mapMove.setTo(255);
+		Point pointsRect[4];
+
+		for (int p = 0; p < 4; ++p)
+		{
+			pointsRect[p] = metaData.mPoints[p] + pntMov;
+		}
+		drawPolyRect(mapMove, pointsRect, Scalar(0), -1);
+
+		matDx.setTo(0, mapMove);
+		matDy.setTo(0, mapMove);
 		double mnx, mxx, mny, mxy;
 		minMaxLoc(matDx, &mnx, &mxx);
 		minMaxLoc(matDy, &mny, &mxy);
@@ -459,14 +478,13 @@ int main()
 		}
 			
 		
-		matAdpt.setTo(0, map);
-		grad8Thr.setTo(0, map);
+		matAdpt.setTo(0, mapMove);
+		grad8Thr.setTo(0, mapMove);
 		if (isWithDilate)
 		{
 			Dilation(grad8Thr, grad8Thr, 1);
 			Erosion(grad8Thr, grad8Thr, 1);
 		}
-		int x = 0, y = 0;
 
 		vector<vector<Point> > contours;
 		vector<Vec4i> hierarchy;
@@ -480,7 +498,7 @@ int main()
 		int idxMax = -1;
 		int rectAreaMax = 0;
 		Point2f pntCgMax(0, 0);
-		Point pntMov(0, 0);
+		
 		if (numOfContours > 0)
 		{
 			int idx = 0;
@@ -546,8 +564,9 @@ int main()
 			//pntCgMax = cdsFrame[idxOfLargeInTheArray].mCg;
 			//x = cdsFrame[idxOfLargeInTheArray].mShRct.x - cntrDataFirst[idxOfLargeInTheFirstArray].mShRct.x;
 			//y = cdsFrame[idxOfLargeInTheArray].mShRct.y - cntrDataFirst[idxOfLargeInTheFirstArray].mShRct.y;
-			x = (int)round(cdsFrame[idxOfLargeInTheArray].mCorners[0].x - cntrDataFirst[idxOfLargeInTheFirstArray].mCorners[0].x);
-			y = (int)round(cdsFrame[idxOfLargeInTheArray].mCorners[0].y - cntrDataFirst[idxOfLargeInTheFirstArray].mCorners[0].y);
+			
+			//x = (int)round(cdsFrame[idxOfLargeInTheArray].mCorners[0].x - cntrDataFirst[idxOfLargeInTheFirstArray].mCorners[0].x);
+			//y = (int)round(cdsFrame[idxOfLargeInTheArray].mCorners[0].y - cntrDataFirst[idxOfLargeInTheFirstArray].mCorners[0].y);
 			int cgXmov = abs(cdsFrame[idxOfLargeInTheArray].mCg.x - cntrDataFirst[idxOfLargeInTheFirstArray].mCg.x);
 			int cgYmov = abs(cdsFrame[idxOfLargeInTheArray].mCg.y - cntrDataFirst[idxOfLargeInTheFirstArray].mCg.y);
 			if (abs(x) > 10 || abs(y) > 10 || cgXmov > 10 || cgYmov > 10)
@@ -555,8 +574,6 @@ int main()
 				cout << "Skipping" << endl;
 				//continue;
 			}
-			pntMov.x = x;
-			pntMov.y = y;
 			//cdsFrame[idxOfLargeInTheArray].mShRct.x -= x;
 			//cdsFrame[idxOfLargeInTheArray].mShRct.y -= y;
 			//cdsFrame[idxOfLargeInTheArray] = cdsFrame[idxOfLargeInTheArray] - pntMov;
@@ -608,7 +625,7 @@ int main()
 						//cv::imshow("grad", grad8Thr);
 						//cv::waitKey();
 						//cout << idxFirst << endl;
-						if (cntFrameNum == -859 && idx == 30 && idxFirst == 4)
+						if (cntFrameNum == -256 && idx == 10 && idxFirst == 2)
 						{
 							shot.setTo(0);
 							//polylines(shot, cdsFrame[idxOfLargeInTheArray].mContour, true, 255, 1, 8);
@@ -624,7 +641,7 @@ int main()
 						}
 
 						vector<ContourData> cdsResidu;
-						if (cd.CompareContourAndReturnResidu(cdf, cdsResidu)==true)//returns true if equal
+						if (cd.CompareContourAndReturnResidu(cdf, cdsResidu, &pntMov)==true)//returns true if equal
 						{
 							if(cd.mLen>cdf.mLen && cdf.mLen>1 && cd.mLen/(float)cdf.mLen<1.25)
 							{
@@ -730,6 +747,7 @@ int main()
 			//cv::imshow("PrevFrame", prevFrame);
 		}
 		cv::imshow("firstFrame", firstFrame);
+		cv::imshow("canMat", canMat);
 		cv::imshow("matAdpt", matAdpt);
 		cv::imshow("Frame", smallFrame);
 		cv::imshow("gradThr", grad8Thr);
