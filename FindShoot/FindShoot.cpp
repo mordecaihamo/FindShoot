@@ -156,8 +156,8 @@ int main()
 	using namespace cv;
 	bool toDisplay = false;
 	String dirName = "C:/moti/FindShoot/";
-	String fName = "MVI_3";	String extName = ".MOV";
-	//String fName = "MVI_4"; String extName = ".MOV";
+	//String fName = "MVI_3";	String extName = ".MOV";
+	String fName = "MVI_4"; String extName = ".MOV";
 	//String fName = "MVI_1"; String extName = ".MOV";
 	//String fName = "MVI_2"; String extName = ".MOV";
 	//String fName = "VID-20181125-WA0005"; String extName = ".mp4"; very bad video
@@ -185,24 +185,46 @@ int main()
 	int rot = (int)cap.get(cv::CAP_PROP_MODE);
  
 	Mat frame, prevFrame, frameDiff, firstFrame;
+	Mat sumFrame, tempSumFrame;
+	Mat smallFrame, firstFrameThrs;
 	Mat Transform;
 	Mat Transform_avg = Mat::eye(2, 3, CV_64FC1);
 	Mat warped;
 	int cntFrameNum = 0;
+	int frameNumAcc = 0;
 	int STARTFRAME = 60;
+	Size sz(-1, -1);
 	for (; cntFrameNum < STARTFRAME; ++cntFrameNum)
 	{
+		cout << cntFrameNum << endl;
 		cap >> frame;
+		if (sz.width == -1)
+		{
+			sz = frame.size();
+			if (sz.width != 740)
+			{
+				sz.height = cvRound(sz.height*(740.0f / sz.width));
+				sz.width = 740;
+			}
+			sumFrame = Mat(sz, CV_16UC3);
+			smallFrame = Mat(sz.height, sz.width, frame.type());
+			firstFrameThrs = Mat(sz.height, sz.width, CV_8UC1);
+			firstFrameThrs.setTo(0);
+			tempSumFrame = Mat(sz.height, sz.width, CV_8UC1);
+			tempSumFrame.setTo(0);
+		}
+		else if(cntFrameNum > STARTFRAME-10)
+		{
+			frameNumAcc++;
+			resize(frame, smallFrame, sz, 0, 0);
+			cvtColor(smallFrame, firstFrame, COLOR_BGR2GRAY);
+			adaptiveThreshold(firstFrame, tempSumFrame, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, (((int)floor(1.1*sz.width)) | 1), 0);
+			firstFrameThrs = firstFrameThrs | tempSumFrame;
+		}
 	}
+	bitwise_not(firstFrameThrs, firstFrameThrs);
+	bitwise_not(tempSumFrame, tempSumFrame);	
 	
-	Size sz = frame.size();
-	if (sz.width != 740)
-	{
-		sz.height = cvRound(sz.height*(740.0f / sz.width));
-		sz.width = 740;		
-	}
-	Mat smallFrame(sz.height, sz.width, frame.type());
-	resize(frame, smallFrame, sz, 0, 0);
 	if (rot != 0)
 	{
 		//cvtColor(firstFrame, firstFrame, CV_BG);
@@ -265,7 +287,7 @@ int main()
 	blur(firstFrame, firstFrame, Size(fltrSz, fltrSz));
 	firstFrame.copyTo(smallFrame);
 	Rect rctMargin;
-	int look = 15;
+	int look = 20;
 	rctMargin.x = look;
 	rctMargin.y = look;
 	rctMargin.width = sz.width - 2 * look;
@@ -294,22 +316,16 @@ int main()
 	
 	Mat shot = map.clone();
 	//Mat mapMar(map, rctMargin);
-	cout << 3 << endl;
+	
 	//Mat targetMar(target, rctMargin);
-	cout << 2 << endl;
+	
 	int thrOfGrad = 77;
 	double thr = 128 + 7;
 	int maxGrayLevelAllowed = 150;
-	cout << 1 << endl;
+	
 //#undef min	cv::min(firstFrame, maxGrayLevelAllowed, firstFrame);
-	Canny(firstFrame, firstGrad, thrOfGrad, 2.75 * thrOfGrad);
+	Canny(firstFrameThrs, firstGrad, thrOfGrad, 2.75 * thrOfGrad);
 	firstGrad.setTo(0, map);
-	bool isWithDilate = false;
-	//if (isWithDilate)
-	{
-		Dilation(firstGrad, firstGrad, 1);
-		Erosion(firstGrad, firstGrad, 1);
-	}
 	
 	//cv::imshow("firstFrame", firstFrame);
 	//cv::imshow("firstGrad", firstGrad);
@@ -435,7 +451,7 @@ int main()
 		}
 		else
 		{
-			cntFrameNum = 256; //940;//742;// //788;// 841;//  
+			cntFrameNum = 1908; //940;//742;// //788;// 841;//  
 			std::stringstream buf;
 			buf << dirName << fName << "/" << cntFrameNum << ".bmp";
 			smallFrame = imread(buf.str());
@@ -480,11 +496,6 @@ int main()
 		
 		matAdpt.setTo(0, mapMove);
 		grad8Thr.setTo(0, mapMove);
-		if (isWithDilate)
-		{
-			Dilation(grad8Thr, grad8Thr, 1);
-			Erosion(grad8Thr, grad8Thr, 1);
-		}
 
 		vector<vector<Point> > contours;
 		vector<Vec4i> hierarchy;
