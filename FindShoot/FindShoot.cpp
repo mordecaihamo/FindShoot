@@ -156,8 +156,8 @@ int main()
 	using namespace cv;
 	bool toDisplay = false;
 	String dirName = "C:/moti/FindShoot/";
-	//String fName = "MVI_3";	String extName = ".MOV";
-	String fName = "MVI_4"; String extName = ".MOV";
+	String fName = "MVI_3";	String extName = ".MOV";
+	//String fName = "MVI_4"; String extName = ".MOV";
 	//String fName = "MVI_1"; String extName = ".MOV";
 	//String fName = "MVI_2"; String extName = ".MOV";
 	//String fName = "VID-20181125-WA0005"; String extName = ".mp4"; very bad video
@@ -324,9 +324,11 @@ int main()
 //#undef min	cv::min(firstFrame, maxGrayLevelAllowed, firstFrame);
 	Canny(firstFrameThrs, firstGrad, thrOfGrad, 2.75 * thrOfGrad);
 	firstGrad.setTo(0, map);
-	Mat shotsHistogramMat(sz.height, sz.width, CV_16UC1);
+	Mat shotsHistogramMat(sz.height, sz.width, CV_32SC1);
+	Mat shotsFrameNumMat(sz.height, sz.width, CV_32SC1);
 	shotsHistogramMat.setTo(1);
 	shotsHistogramMat.setTo(0, map);
+	shotsFrameNumMat.setTo(0);
 	//cv::imshow("firstFrame", firstFrame);
 	//cv::imshow("firstGrad", firstGrad);
 	//cv::waitKey();
@@ -760,9 +762,26 @@ int main()
 			pMatThr.copyTo(pMatShot);
 			bitwise_not(pMatShot, pMatShot);
 		}
-		Mat shot16;
-		shot.convertTo(shot16, shotsHistogramMat.type(),1.0/255.0);
-		shotsHistogramMat += shot16;
+		if (numOfShotsFound > 0)
+		{
+			Mat shot32;
+			shot.convertTo(shot32, shotsHistogramMat.type(), 1.0 / 255.0);
+			shotsHistogramMat += shot32;
+
+			/*Mark the shots pixels with the frame num*/
+			for (int r = 0; r < sz.height; ++r)
+			{	
+				for (int c = 0; c < sz.width; ++c)
+				{
+					auto val = shot.at<UCHAR>(r, c);
+					auto valFrameNum = shotsFrameNumMat.at<int>(r, c);
+					if (val > 0 && valFrameNum == 0)
+					{
+						shotsFrameNumMat.at<int>(r, c) = cntFrameNum;
+					}
+				}
+			}
+		}
 		if (!isFromFile)
 		{
 			frameRgb.copyTo(frameRgbDisplayed);
@@ -773,6 +792,10 @@ int main()
 		minMaxLoc(shotsHistogramMat, &mn16, &mx16);
 		shotsHistogramMat.convertTo(shot, shot.type(), 255.0 / max(1.0, mx16));
 		cv::imshow("shotsHistogramMat", shot);
+		//minMaxLoc(shotsFrameNumMat, &mn16, &mx16);
+		shotsFrameNumMat.convertTo(shot, shot.type(), 255.0 / cntFrameNum);
+		cv::imshow("shotsFrameNumMat", shot);
+
 		cv::imshow("firstFrame", firstFrame);
 		//cv::imshow("canMat", canMat);
 		cv::imshow("matAdpt", matAdpt);
