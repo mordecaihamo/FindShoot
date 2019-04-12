@@ -279,6 +279,7 @@ int main()
 	double mn, mx;
 	
 	cvtColor(smallFrame, firstFrame, COLOR_BGR2GRAY);
+
 	drawPolyRect(smallFrame, metaData.mPoints, Scalar(255, 0, 17), 1);
 	//cv::imshow("TargetOnFrame", smallFrame);
 	//cv::setMouseCallback("TargetOnFrame", mouse_callback);
@@ -310,14 +311,11 @@ int main()
 	int bg = cvFloor((ffMin+ffMax)*0.5);
 	cv::threshold(target, target, 1, 255, THRESH_BINARY);
 	
-	Mat shiftMap = map(Rect(1, 1, sz.width - 1, sz.height - 1));
+	//Mat shiftMap = map(Rect(1, 1, sz.width - 1, sz.height - 1));
 	
 	rectangle(target, rectInBound, Scalar(100));
 	
 	Mat shot = map.clone();
-	//Mat mapMar(map, rctMargin);
-	
-	//Mat targetMar(target, rctMargin);
 	
 	int thrOfGrad = 77;
 	double thr = 128 + 7;
@@ -326,7 +324,9 @@ int main()
 //#undef min	cv::min(firstFrame, maxGrayLevelAllowed, firstFrame);
 	Canny(firstFrameThrs, firstGrad, thrOfGrad, 2.75 * thrOfGrad);
 	firstGrad.setTo(0, map);
-	
+	Mat shotsHistogramMat(sz.height, sz.width, CV_16UC1);
+	shotsHistogramMat.setTo(1);
+	shotsHistogramMat.setTo(0, map);
 	//cv::imshow("firstFrame", firstFrame);
 	//cv::imshow("firstGrad", firstGrad);
 	//cv::waitKey();
@@ -460,7 +460,7 @@ int main()
 		int x = 0, y = 0;
 		FindMovment(firstFrame, smallFrame, x, y, rectInBound, look,false,false);
 		Point pntMov(x, y);
-		//Erosion(smallFrame, smallFrame, 1, MORPH_CROSS);
+		
 		adaptiveThreshold(smallFrame, matAdpt, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, (((int)floor(1.1*sz.width)) | 1), 0);
 		cv::imshow("matAdptBeforeClean", matAdpt);
 		Canny(matAdpt, grad8Thr, 0, 255,5,true);
@@ -730,9 +730,12 @@ int main()
 		int numOfShotsFound = (int)shotsCand.size();
 		cout << "Num of shots after NMS in frame " << cntFrameNum << " is ," << numOfShotsFound << endl;
 		fout << "Num of shots after NMS in frame " << cntFrameNum << " is ," << numOfShotsFound << endl;
+		shot.setTo(0);
 		for (int rc = 0; rc < numOfShotsFound; ++rc)
 		{
-			Rect rct = shotsCand[rc].mShRct;
+			Rect rct(shotsCand[rc].mShRct);
+			//polylines(shot, shotsCand[rc].mContour, true, 1, -1, 8);
+
 			//rct.x -= x;
 			//rct.y -= y;
 			//rectangle(frameRgb, rct, colors[rc], 2);
@@ -750,15 +753,28 @@ int main()
 				//cv::imshow("Frame", smallFrame);
 				//cv::waitKey();
 			}
+			//Copy the shot to the shots map, this map will be added to the totla map
+			rct = rct - pntMov;
+			Mat pMatThr = matAdpt(shotsCand[rc].mShRct);
+			Mat pMatShot = shot(rct);
+			pMatThr.copyTo(pMatShot);
+			bitwise_not(pMatShot, pMatShot);
 		}
+		Mat shot16;
+		shot.convertTo(shot16, shotsHistogramMat.type(),1.0/255.0);
+		shotsHistogramMat += shot16;
 		if (!isFromFile)
 		{
 			frameRgb.copyTo(frameRgbDisplayed);
 			cv::imshow("SHOTS", frameRgbDisplayed);
 			//cv::imshow("PrevFrame", prevFrame);
 		}
+		double mn16, mx16;
+		minMaxLoc(shotsHistogramMat, &mn16, &mx16);
+		shotsHistogramMat.convertTo(shot, shot.type(), 255.0 / max(1.0, mx16));
+		cv::imshow("shotsHistogramMat", shot);
 		cv::imshow("firstFrame", firstFrame);
-		cv::imshow("canMat", canMat);
+		//cv::imshow("canMat", canMat);
 		cv::imshow("matAdpt", matAdpt);
 		cv::imshow("Frame", smallFrame);
 		cv::imshow("gradThr", grad8Thr);
