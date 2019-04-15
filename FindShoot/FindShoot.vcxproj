@@ -170,12 +170,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="AnalyzeShotsResult.h" />
     <ClInclude Include="ContourData.h" />
     <ClInclude Include="MovmentUtils.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="ShootTargetMetaData.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AnalyzeShotsResult.cpp" />
     <ClCompile Include="ContourData.cpp" />
     <ClCompile Include="FindShoot.cpp" />
     <ClCompile Include="pch.cpp">

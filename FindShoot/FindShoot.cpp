@@ -156,8 +156,8 @@ int main()
 	using namespace cv;
 	bool toDisplay = false;
 	String dirName = "C:/moti/FindShoot/";
-	String fName = "MVI_3";	String extName = ".MOV";
-	//String fName = "MVI_4"; String extName = ".MOV";
+	//String fName = "MVI_3";	String extName = ".MOV";
+	String fName = "MVI_4"; String extName = ".MOV";
 	//String fName = "MVI_1"; String extName = ".MOV";
 	//String fName = "MVI_2"; String extName = ".MOV";
 	//String fName = "VID-20181125-WA0005"; String extName = ".mp4"; very bad video
@@ -815,6 +815,18 @@ int main()
 		else
 			break;
 	}
+
+	std::stringstream bufH, bufT;
+	bufH << dirName << fName << "/HistOfShots.xml";
+	bufT << dirName << fName << "/TimeOfShots.xml";
+	cv::FileStorage fileHisto(bufH.str(), cv::FileStorage::WRITE);
+	cv::FileStorage fileTime(bufT.str(), cv::FileStorage::WRITE);
+	// Write to file!
+	fileHisto << "shotsHistogramMat" << shotsHistogramMat;
+	fileTime << "shotsFrameNumMat" << shotsFrameNumMat;
+	fileHisto.release();
+	fileTime.release();
+
 	//destroyAllWindows();
 	if (!isFromFile)
 		cv::imshow("SHOTS", frameRgbDisplayed);
@@ -823,5 +835,7 @@ int main()
 	fout.close();
   // When everything done, release the video capture object
 	cap.release();
+
+
     return 0;
 }
