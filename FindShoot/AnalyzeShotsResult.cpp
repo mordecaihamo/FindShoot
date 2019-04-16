@@ -2,6 +2,15 @@
 #include "AnalyzeShotsResult.h"
 
 
+//void main()
+//{
+//	//string histFileName = "C:\\moti\\FindShoot\\MVI_4\\HistOfShots.xml";
+//	//string timeFileName = "C:\\moti\\FindShoot\\MVI_4\\TimeOfShots.xml";
+//	//string metadataFileName = "C:\\moti\\FindShoot\\MVI_4.txt";
+//	//AnalyzeShotsResult analyzer(histFileName, timeFileName, metadataFileName);
+//	//analyzer.Compute(histFileName);
+//}
+
 AnalyzeShotsResult::AnalyzeShotsResult()
 {
 }
@@ -48,7 +57,6 @@ int AnalyzeShotsResult::Compute(string& csvResultFileName)
 	minMaxLoc(mShotsFrameNumMat, &mn16, &mx16);
 	mShotsFrameNumMat.convertTo(shot, shot.type(), 255.0 / mx16);
 	cv::imshow("shotsFrameNumMat", shot);
-
 
 	return numOfShots;
 }
