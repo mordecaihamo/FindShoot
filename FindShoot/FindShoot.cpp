@@ -15,6 +15,7 @@
 #include "ShootTargetMetaData.h"
 #include "MovmentUtils.h"
 #include "ContourData.h"
+#include "AnalyzeShotsResult.h"
 
 using namespace std;
 using namespace cv;
@@ -156,8 +157,8 @@ int main()
 	using namespace cv;
 	bool toDisplay = false;
 	String dirName = "C:/moti/FindShoot/";
-	//String fName = "MVI_3";	String extName = ".MOV";
-	String fName = "MVI_4"; String extName = ".MOV";
+	String fName = "MVI_3";	String extName = ".MOV";
+	//String fName = "MVI_4"; String extName = ".MOV";
 	//String fName = "MVI_1"; String extName = ".MOV";
 	//String fName = "MVI_2"; String extName = ".MOV";
 	//String fName = "VID-20181125-WA0005"; String extName = ".mp4"; very bad video
@@ -166,7 +167,13 @@ int main()
 	fout.open(dirName + fName + ".csv");
 	
 	String fullFileName = dirName + fName + extName;
-	
+	String mdFileName = dirName + fName + ".txt";
+	String s1 = dirName + fName + "/HistOfShots.xml";
+	String s2 = dirName + fName + "/TimeOfShots.xml";
+	AnalyzeShotsResult ana(s1, s2, mdFileName);
+	ana.Compute(s1);
+	return 0;
+
 	struct stat buffer;
 	if (stat(fullFileName.c_str(), &buffer) != 0)
 	{
@@ -188,7 +195,7 @@ int main()
 	Mat sumFrame, tempSumFrame;
 	Mat smallFrame, firstFrameThrs;
 	Mat Transform;
-	Mat Transform_avg = Mat::eye(2, 3, CV_64FC1);
+	//Mat Transform_avg = Mat::eye(2, 3, CV_64FC1);
 	Mat warped;
 	int cntFrameNum = 0;
 	int frameNumAcc = 0;
@@ -232,7 +239,6 @@ int main()
 	}
 	ShootTargetMetaData metaData;
 	
-	String mdFileName = dirName + fName + ".txt";
 	if (stat(mdFileName.c_str(), &buffer) != 0)
 	{
 		int margins = 10;

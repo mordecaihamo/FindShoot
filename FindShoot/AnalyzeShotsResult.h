@@ -13,27 +13,29 @@
 #include "opencv2/video.hpp"
 #include "ContourData.h"
 #include "ShootTargetMetaData.h"
+#include "ShotData.h"
 
 using namespace std;
 using namespace cv;
 
 class AnalyzeShotsResult
 {
-	string mFileHisto;
-	string mFileTime;
+	String mFileHisto;
+	String mFileTime;
 	Mat mShotsHistogramMat;// (sz.height, sz.width, CV_32SC1);
 	Mat mShotsFrameNumMat;
 	vector<ContourData> mCntrData;
 	ShootTargetMetaData mMetaData;
+	vector<ShotData> mShotsData;
 
 public:
 	AnalyzeShotsResult();
-	AnalyzeShotsResult(string& histFileName, string& timeFileName);
-	AnalyzeShotsResult(string& histFileName, string& timeFileName, string& metadataFileName);
+	AnalyzeShotsResult(String& histFileName, String& timeFileName);
+	AnalyzeShotsResult(String& histFileName, String& timeFileName, String& metadataFileName);
 	~AnalyzeShotsResult();
 
-	int Compute(string& csvFileName);
-	int LoadMetaData(string& mdFileName);
+	int Compute(String& csvFileName);
+	int LoadMetaData(String& mdFileName);
 };
 
 #endif
