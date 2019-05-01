@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "AnalyzeShotsResult.h"
+#include "ShotData.h"
 
 
 //void main()
@@ -45,7 +46,7 @@ int AnalyzeShotsResult::LoadMetaData(String& mdFileName)
 	return 1;
 }
 
-int AnalyzeShotsResult::Compute(string& csvResultFileName)
+int AnalyzeShotsResult::Compute()
 {
 	int numOfShots = 0;
 	Size sz = mShotsHistogramMat.size();
@@ -63,16 +64,9 @@ int AnalyzeShotsResult::Compute(string& csvResultFileName)
 	cv::imshow("shotsFrameNumMat", shot);
 	shotsFound.convertTo(shot, shot.type());
 	cv::imshow("shotsFound", shot);
-
-
-	Mat labels;
-	Mat stats;
-	Mat centroids;
-	cv::connectedComponentsWithStats(shot, labels, stats, centroids);
-	minMaxLoc(labels, &mn16, &mx16);
-	labels.convertTo(shot, shot.type(), 255.0 / mx16);
-	cv::imshow("labels", shot);
 	cv::waitKey();
+	vector<ShotData> sds;
+	numOfShots = LookForShots(mShotsHistogramMat, mShotsFrameNumMat, 50, sds);
 
 	return numOfShots;
 }

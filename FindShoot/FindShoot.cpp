@@ -171,7 +171,7 @@ int main()
 	String s1 = dirName + fName + "/HistOfShots.xml";
 	String s2 = dirName + fName + "/TimeOfShots.xml";
 	AnalyzeShotsResult ana(s1, s2, mdFileName);
-	ana.Compute(s1);
+	ana.Compute();
 	return 0;
 
 	struct stat buffer;

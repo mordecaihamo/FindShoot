@@ -10,17 +10,17 @@
 using namespace std;
 using namespace cv;
 
-//int LookForShots()
-
 class ShotData
 {
+public:	
 	vector<Point> mPoints;
 	int mLen;
 	float mValueInHist;
 	float mValueInTime;
-public:
+
 	ShotData();
 	~ShotData();
 };
 
+int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotData>& shots);
 #endif

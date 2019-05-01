@@ -34,7 +34,7 @@ public:
 	AnalyzeShotsResult(String& histFileName, String& timeFileName, String& metadataFileName);
 	~AnalyzeShotsResult();
 
-	int Compute(String& csvFileName);
+	int Compute();
 	int LoadMetaData(String& mdFileName);
 };
 
