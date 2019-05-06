@@ -2,8 +2,13 @@
 #include "ShotData.h"
 #include <iostream>
 
+bool comparePix(pair<Point, float> a, pair<Point, float> b)
+{
+	return a.second > b.second;
+}
+
 //https://stackoverflow.com/questions/1257117/a-working-non-recursive-floodfill-algorithm-written-in-c
-void FloodfillIter(Mat& vals, Point q, int SEED_COLOR,int lowTol, int highTol, int COLOR, vector<Point>& foundPix, Mat& mask, int COLOR_MASK)
+void FloodfillIter(Mat& vals, Point q, int SEED_COLOR,int lowTol, int highTol, int COLOR, vector<pair<Point, float>>& foundPix, Mat& mask, int COLOR_MASK)
 {
 	int h = vals.rows;
 	int w = vals.cols;
@@ -25,14 +30,16 @@ void FloodfillIter(Mat& vals, Point q, int SEED_COLOR,int lowTol, int highTol, i
 		float val = vals.at<float>(y, x);
 		if (val >= SEED_COLOR - lowTol && val <= SEED_COLOR + highTol)
 		{
-			foundPix.push_back(p);
+			float v = mask.at<float>(y, x);
+			foundPix.push_back(make_pair(p,v));
+			
 			vals.at<float>(y, x) = COLOR;
+			mask.at<float>(y, x) = COLOR_MASK;
 			stack.push_back(Point(x + 1, y));
 			stack.push_back(Point(x - 1, y));
 			stack.push_back(Point(x, y + 1));
 			stack.push_back(Point(x, y - 1));
 		}
-		mask.at<uchar>(y, x) = COLOR_MASK;
 	}
 }
 
@@ -43,7 +50,7 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 	Mat hist, histThr, mask;
 	histMat.convertTo(hist, CV_32FC1);
 	threshold(hist, histThr, thresholdInHist, 255, THRESH_BINARY);
-	histThr.convertTo(histThr, CV_8UC1);
+	//histThr.convertTo(histThr, CV_8UC1);
 	Size sz = histMat.size();
 	int cnt = 0;
 	int tolH = 150; //upper and lower diff to distitinguish between tight shots
@@ -52,8 +59,8 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 	{
 		for (int c = 0; c < sz.width; ++c)
 		{
-			int thrval = histThr.at<uchar>(r, c);
-			if (thrval > 0)
+			int thrval = histThr.at<float>(r, c);
+			if (thrval > 128)
 			{
 				--cnt;
 				Rect rct;
@@ -64,36 +71,44 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 				minMaxLoc(hist, &mn16, &mx16);
 				Mat dispHist;
 				hist.convertTo(dispHist, CV_8U, 255.0 / max(1.0, mx16));
+				rectangle(dispHist, Point(c, r), Point(min(sz.width-1,c + 10), min(sz.height - 1, r + 10)), Scalar(255.0));
 				cv::imshow("histBefore", dispHist);
 #endif
 				if (val - tolL < thresholdInHist)
 					tolL = 0;
-				FloodfillIter(hist, Point(c, r), val, tolL, tolH, cnt, sd.mPoints, histThr, 0);
+				FloodfillIter(histThr, Point(c, r), thrval, tolL, tolH, cnt, sd.mPoints, hist, 0);
 #ifdef _DISPLAY
 				hist.convertTo(dispHist, CV_8U, 255.0 / max(1.0, mx16));
 				cv::imshow("histAfter", dispHist);
-				cv::imshow("histThr", histThr);
-#endif
-				sd.mValueInHist = val;
-
-				//To compute the shot time we will collect all the values from the time mat and find the median in them
-				vector<int> timeVals;
-				int foundSz = (int)sd.mPoints.size();
-				if (foundSz > 0)
-				{
-					for (int i = 0; i < foundSz; ++i)
-					{
-						int t = timeMat.at<int>(sd.mPoints[i].y, sd.mPoints[i].x);
-						timeVals.push_back(t);
-					}
-					sort(timeVals.begin(), timeVals.end());
-					int foundSz2 = foundSz >> 1;
-					sd.mValueInTime = timeVals[foundSz2];
-					shots.push_back(sd);
-					++numOfShots;
-					cout << "Found " << numOfShots << " size " << foundSz << " value in hist " << val << " marked at frame # " << sd.mValueInTime << endl;
-				}
+				histThr.convertTo(dispHist, CV_8U);
+				cv::imshow("histThr", dispHist);
 				cv::waitKey();
+#endif
+				vector<ShotData> sdsSplit;
+				sd.mIsFromSplit = false;
+				sd.Split(sdsSplit);
+				sd.mValueInHist = val;
+				sdsSplit.push_back(sd);
+				for (int indSd = 0; indSd < (int)sdsSplit.size(); ++indSd)
+				{
+					//To compute the shot time we will collect all the values from the time mat and find the median in them
+					vector<int> timeVals;
+					int foundSz = (int)sdsSplit[indSd].mPoints.size();
+					if (foundSz > 0)
+					{
+						for (int i = 0; i < foundSz; ++i)
+						{
+							int t = timeMat.at<int>(sdsSplit[indSd].mPoints[i].first.y, sdsSplit[indSd].mPoints[i].first.x);
+							timeVals.push_back(t);
+						}
+						sort(timeVals.begin(), timeVals.end());
+						int foundSz2 = foundSz >> 1;
+						sdsSplit[indSd].mValueInTime = timeVals[foundSz2];
+						shots.push_back(sdsSplit[indSd]);
+						++numOfShots;
+						cout << "Found " << numOfShots << " size " << foundSz << " value in hist " << val << " marked at frame # " << sd.mValueInTime << endl;
+					}
+				}
 			}
 		}
 	}
@@ -107,4 +122,72 @@ ShotData::ShotData()
 
 ShotData::~ShotData()
 {
+}
+
+int ShotData::Split(vector<ShotData>& sds)
+{
+	int numOfShots = 0;
+	int len = (int)mPoints.size();
+	if (len < 5)
+		return numOfShots;
+	vector<pair<Point, float>> allP = mPoints;
+	
+	sort(allP.begin(), allP.end(), comparePix);
+	float curMaxVal = allP[0].second;
+	int binInterval = 35;
+	int numOfBins = (int)(curMaxVal / binInterval);
+	vector <vector<pair<Point, float>>> histP(numOfBins);
+	int curBin = 0;
+	for (int l = 0; l < len; ++l)
+	{
+		if (curMaxVal - allP[l].second < binInterval)
+		{
+			histP[curBin].push_back(allP[l]);
+		}
+		else if (curBin < numOfBins)
+		{
+			++curBin;
+			curMaxVal = allP[l].second;
+			histP[curBin].push_back(allP[l]);
+		}
+	}
+	//The first one (0) is the shot itself, so skip it.
+	for (int n = 1; n <= curBin; ++n)
+	{
+		if ((int)histP[n].size() >= 5)
+		{
+			//Possible new touching shot
+			//Check with the rect cover test
+			Rect rct;
+			int mnx = INT16_MAX, mxx = -1, mny = INT16_MAX, mxy = -1;
+			
+			for (int i = 0; i < (int)histP[n].size(); ++i)
+			{
+				if (histP[n][i].first.x < mnx)
+					mnx = histP[n][i].first.x;
+				if (histP[n][i].first.x > mxx)
+					mxx = histP[n][i].first.x;
+				if (histP[n][i].first.y < mny)
+					mny = histP[n][i].first.y;
+				if (histP[n][i].first.y > mxy)
+					mxy = histP[n][i].first.y;
+			}
+			int dx = mxx - mnx + 1;
+			int dy = mxy - mny + 1;
+			int s = dx * dy;
+			float rat = (float)histP[n].size() / s;
+			if (rat > 0.5)
+			{
+				ShotData sd;
+				sd.mLen = (int)histP[n].size();
+				sd.mPoints = histP[n];
+				sd.mValueInHist = curMaxVal + n * binInterval;
+				sd.mIsFromSplit = true;
+				sds.push_back(sd);
+				++numOfShots;
+			}
+		}
+	}
+
+	return numOfShots;
 }

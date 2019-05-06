@@ -4,6 +4,7 @@
 
 #include "pch.h"
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include "opencv2/core.hpp"
 #include "opencv2/imgcodecs.hpp"
@@ -34,7 +35,7 @@ public:
 	AnalyzeShotsResult(String& histFileName, String& timeFileName, String& metadataFileName);
 	~AnalyzeShotsResult();
 
-	int Compute();
+	int Compute(String& resultFileName);
 	int LoadMetaData(String& mdFileName);
 };
 

@@ -3,14 +3,10 @@
 #include "ShotData.h"
 
 
-//void main()
-//{
-//	//string histFileName = "C:\\moti\\FindShoot\\MVI_4\\HistOfShots.xml";
-//	//string timeFileName = "C:\\moti\\FindShoot\\MVI_4\\TimeOfShots.xml";
-//	//string metadataFileName = "C:\\moti\\FindShoot\\MVI_4.txt";
-//	//AnalyzeShotsResult analyzer(histFileName, timeFileName, metadataFileName);
-//	//analyzer.Compute(histFileName);
-//}
+bool CompareShotData(ShotData a, ShotData b)
+{
+	return a.mValueInTime < b.mValueInTime;
+}
 
 AnalyzeShotsResult::AnalyzeShotsResult()
 {
@@ -46,7 +42,7 @@ int AnalyzeShotsResult::LoadMetaData(String& mdFileName)
 	return 1;
 }
 
-int AnalyzeShotsResult::Compute()
+int AnalyzeShotsResult::Compute(String& resultFileName)
 {
 	int numOfShots = 0;
 	Size sz = mShotsHistogramMat.size();
@@ -67,6 +63,25 @@ int AnalyzeShotsResult::Compute()
 	cv::waitKey();
 	vector<ShotData> sds;
 	numOfShots = LookForShots(mShotsHistogramMat, mShotsFrameNumMat, 50, sds);
+	sort(sds.begin(), sds.end(), CompareShotData);
+	/*Write the results to csv a file*/
+	ofstream of(resultFileName, ios::out | ios::trunc );
+	if (of.is_open())
+	{
+		of << "Frame#, Time(sec), Size, x, y, TL dis, TR dis, BR dis, BL dis, Center Dis" << endl;
+		for (int i = 0; i < numOfShots; ++i)
+		{
+			of << sds[i].mValueInTime << "," << std::setprecision(2) << sds[i].mValueInTime * 0.04 << ",";
+			of << sds[i].mLen << "," << sds[i].mCgX << "," << sds[i].mCgY << ",";
+			for (int d = 0; d < 4; ++d)
+			{
+				of << sds[i].mDisFromCorners[d] << ",";
+			}
+			of << sds[i].mDisFromCenter << endl;
+		}
+		of.close();
+	}
+
 
 	return numOfShots;
 }

@@ -13,13 +13,19 @@ using namespace cv;
 class ShotData
 {
 public:	
-	vector<Point> mPoints;
+	vector<pair<Point,float>> mPoints;
 	int mLen;
 	float mValueInHist;
 	float mValueInTime;
+	bool mIsFromSplit;
+	float mCgX;
+	float mCgY;
+	vector<float> mDisFromCorners;
+	float mDisFromCenter;
 
 	ShotData();
 	~ShotData();
+	int Split(vector<ShotData>& sds);
 };
 
 int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotData>& shots);
