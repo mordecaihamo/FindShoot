@@ -43,7 +43,7 @@ void FloodfillIter(Mat& vals, Point q, int SEED_COLOR,int lowTol, int highTol, i
 	}
 }
 
-#define _DISPLAY
+//#define _DISPLAY
 int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotData>& shots)
 {
 	int numOfShots = 0;
@@ -86,7 +86,15 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 #endif
 				vector<ShotData> sdsSplit;
 				sd.mIsFromSplit = false;
-				sd.Split(sdsSplit);
+				sd.mLen = (int)sd.mPoints.size();
+				int splitsFound = sd.Split(sdsSplit);
+				if (splitsFound > 0)
+				{
+					for (int indSd = 0; indSd < (int)sdsSplit.size(); ++indSd)
+					{
+						sd.mLen -= sdsSplit[indSd].mLen;
+					}
+				}
 				sd.mValueInHist = val;
 				sdsSplit.push_back(sd);
 				for (int indSd = 0; indSd < (int)sdsSplit.size(); ++indSd)
@@ -117,6 +125,7 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 
 ShotData::ShotData()
 {
+	mDisFromCorners.resize(4, 0.0f);
 }
 
 

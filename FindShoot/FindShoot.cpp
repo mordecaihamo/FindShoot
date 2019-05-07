@@ -170,8 +170,9 @@ int main()
 	String mdFileName = dirName + fName + ".txt";
 	String s1 = dirName + fName + "/HistOfShots.xml";
 	String s2 = dirName + fName + "/TimeOfShots.xml";
+	String s3 = dirName + fName + "/ShotsResults.csv";
 	AnalyzeShotsResult ana(s1, s2, mdFileName);
-	ana.Compute();
+	ana.Compute(s3);
 	return 0;
 
 	struct stat buffer;

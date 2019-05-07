@@ -16,4 +16,12 @@ void FindMovment(Mat& a, Mat& b, int& x, int& y, Rect& rct, int lookDis, bool is
 
 Rect FindInboundRect(Rect rct, const Point* rectPoints);
 
+template<class AUC>
+AUC AucDis(AUC ax, AUC ay, AUC bx, AUC by)
+{
+	AUC dx = ax - bx;
+	AUC dy = ay - by;
+	return sqrt(dx * dx + dy * dy);
+}
+
 #endif
