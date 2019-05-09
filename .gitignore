@@ -38,3 +38,5 @@
 /AnalyzeShotResults
 /.vs/FindShoot/v16/ipch
 /.vs/FindShoot/v16
+/ShotTracker/obj
+/ShotTracker/bin/Release
