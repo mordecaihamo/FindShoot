@@ -154,22 +154,27 @@ void mouse_callback(int  event, int  x, int  y, int  flag, void *param)
 }
 
 using namespace cv;
-String Char2String(char* str, int len)
-{
-	String outStr;
-	for (int i = 0; i < len; ++i)
-	{
-		outStr += str[i];
-	}
-	return outStr;
-}
+using namespace std;
 
 int FindShoots(char* vidName)
 {
 	String fullFileName(vidName);
-	//int posOfLastSlash = fullFileName.find_last_of('/', 0);
-	String dirName = "C:/moti/FindShoot/";
-	String fName = "MVI_3";	String extName = ".MOV";
+	size_t posOfLastSlash = fullFileName.find_last_of("/\\");
+	String dirName = "";
+	String fName = "";
+	String extName = "";
+	if (posOfLastSlash != string::npos)
+	{
+		dirName = fullFileName.substr(0, posOfLastSlash + 1);//"C:/moti/FindShoot/";
+	}
+	fName = fullFileName.substr(posOfLastSlash + 1);//"MVI_3";	
+	size_t posOfLastDot = fName.find_last_of(".");
+	if (posOfLastDot != string::npos)
+	{
+		extName = fName.substr(posOfLastDot); //".MOV";
+	}
+	fName = fName.substr(0, posOfLastDot);
+
 	//String fName = "MVI_4"; String extName = ".MOV";
 	//String fName = "MVI_1"; String extName = ".MOV";
 	//String fName = "MVI_2"; String extName = ".MOV";

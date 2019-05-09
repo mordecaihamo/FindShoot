@@ -36,8 +36,27 @@ namespace ShotTracker
 
         private void BtnPlay_Click(object sender, RoutedEventArgs e)
         {
-            string vidName = "C:\\moti\\FindShoot\\MVI_3.MOV";
+            string vidName = "C:/moti/FindShoot/MVI_3.MOV"; //"C:\\moti\\FindShoot\\MVI_3.MOV";
             int res = FindShoots(vidName);
+        }
+
+        private void BtnBrowseVidFile_Click(object sender, RoutedEventArgs e)
+        {
+            var fileDialog = new System.Windows.Forms.OpenFileDialog();
+            var result = fileDialog.ShowDialog();
+            switch (result)
+            {
+                case System.Windows.Forms.DialogResult.OK:
+                    var file = fileDialog.FileName;
+                    txtVidFile.Text = file;
+                    txtVidFile.ToolTip = file;
+                    break;
+                case System.Windows.Forms.DialogResult.Cancel:
+                default:
+                    txtVidFile.Text = null;
+                    txtVidFile.ToolTip = null;
+                    break;
+            }
         }
     }
 }
