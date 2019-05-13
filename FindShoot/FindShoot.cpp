@@ -417,6 +417,11 @@ int FindShoots(char* vidName)
 	bool isFromFile = false && !isToSave;
 	//isInspectNms = true;
 	//isFromFile = true && !isToSave;
+	if (isToSave)
+	{
+		string folderCreateCommand = "mkdir \"" + dirName + fName + "\"";
+		system(folderCreateCommand.c_str());
+	}
 
 	int sumX = 0, sumY = 0;
 	while (1)
@@ -828,25 +833,30 @@ int main()
 {
 	using namespace cv;
 	bool toDisplay = false;
-	String dirName = "C:/moti/FindShoot/";
-	String fName = "MVI_3";	String extName = ".MOV";
+	String dirName = "C:/moti/FindShoot/videos/";
+	//String fName = "MVI_3";	String extName = ".MOV";
 	//String fName = "MVI_4"; String extName = ".MOV";
 	//String fName = "MVI_1"; String extName = ".MOV";
 	//String fName = "MVI_2"; String extName = ".MOV";
 	//String fName = "VID-20181125-WA0005"; String extName = ".mp4"; very bad video
-
+	//String fName = "GH010005";	String extName = ".MP4";
+	//String fName = "GH010010";	String extName = ".MP4";
+	String fName = "20190510_093213";	String extName = ".mp4";//Samsung
+	
 	ofstream fout;
 	fout.open(dirName + fName + ".csv");
-	
 	String fullFileName = dirName + fName + extName;
 	String mdFileName = dirName + fName + ".txt";
-	String s1 = dirName + fName + "/HistOfShots.xml";
-	String s2 = dirName + fName + "/TimeOfShots.xml";
-	String s3 = dirName + fName + "/ShotsResults.csv";
-	AnalyzeShotsResult ana(s1, s2, mdFileName);
-	ana.Compute(s3);
-	return 0;
 
+	if (0)
+	{
+		String s1 = dirName + fName + "/HistOfShots.xml";
+		String s2 = dirName + fName + "/TimeOfShots.xml";
+		String s3 = dirName + fName + "/ShotsResults.csv";
+		AnalyzeShotsResult ana(s1, s2, mdFileName);
+		ana.Compute(s3);
+		return 0;
+	}
 	struct stat buffer;
 	if (stat(fullFileName.c_str(), &buffer) != 0)
 	{
@@ -886,6 +896,7 @@ int main()
 				sz.height = cvRound(sz.height*(740.0f / sz.width));
 				sz.width = 740;
 			}
+
 			sumFrame = Mat(sz, CV_16UC3);
 			smallFrame = Mat(sz.height, sz.width, frame.type());
 			firstFrameThrs = Mat(sz.height, sz.width, CV_8UC1);
@@ -905,6 +916,10 @@ int main()
 	bitwise_not(firstFrameThrs, firstFrameThrs);
 	bitwise_not(tempSumFrame, tempSumFrame);	
 	
+	Size largeSz = frame.size();
+	float ratSmall2Large = (float)largeSz.width / (float)sz.width;
+	float rat = 1.0f;
+
 	if (rot != 0)
 	{
 		//cvtColor(firstFrame, firstFrame, CV_BG);
@@ -935,6 +950,22 @@ int main()
 		imshow("EnterPositions", metaData.mOrgMat);
 		cv::setMouseCallback("EnterPositions", MarkRectDrag_callback, &metaData);
 		int k = cv::waitKey();
+		float targetWidth = AucDis((float)metaData.mPoints[0].x, (float)metaData.mPoints[0].y, (float)metaData.mPoints[1].x, (float)metaData.mPoints[1].y);
+		//Make sure that the width of the target is 300 pix
+		rat = 300 / targetWidth;
+		
+		sz.width = round(sz.width*rat);
+		sz.height = round(sz.height*rat);
+		for (int i = 0; i < 4; ++i)
+		{
+			metaData.mPoints[i].x = round(metaData.mPoints[i].x*ratSmall2Large);
+			metaData.mPoints[i].y = round(metaData.mPoints[i].y*ratSmall2Large);
+		}
+		metaData.mCenter.x = round(metaData.mCenter.x*ratSmall2Large);
+		metaData.mCenter.y = round(metaData.mCenter.y*ratSmall2Large);
+		drawPolyRect(frame, metaData.mPoints, Scalar(255, 0, 17), 1);
+		cv::imshow("TargetOnFrame", frame);
+		cv::waitKey();
 		metaData.ToFile(mdFileName);
 	}
 	else
@@ -946,18 +977,47 @@ int main()
 			cout << "(" << p.x << "," << p.y << ")" << endl;
 		}
 		cout << "Center: (" << metaData.mCenter.x << "," << metaData.mCenter.y << ")"<<endl;
+
+		float targetWidth = AucDis((float)metaData.mPoints[0].x, (float)metaData.mPoints[0].y, (float)metaData.mPoints[1].x, (float)metaData.mPoints[1].y);
+		//Make sure that the width of the target is 300 pix
+		rat = 300 / targetWidth;
+
+		sz.width = round(largeSz.width*rat);
+		sz.height = round(largeSz.height*rat);
+		//
+		resize(frame, smallFrame, sz, 0, 0);
+		drawPolyRect(frame, metaData.mPoints, Scalar(255, 0, 17), 1);
+		cv::imshow("TargetOnFrame", frame);
+		//
+		for (int i = 0; i < 4; ++i)
+		{
+			metaData.mPoints[i].x = round(metaData.mPoints[i].x*rat);
+			metaData.mPoints[i].y = round(metaData.mPoints[i].y*rat);
+		}
+		metaData.mCenter.x = round(metaData.mCenter.x*rat);
+		metaData.mCenter.y = round(metaData.mCenter.y*rat);
+
+		//
+		drawPolyRect(smallFrame, metaData.mPoints, Scalar(255, 0, 17), 1);
+		cv::imshow("TargetOnSmallFrame", smallFrame);
+		cv::waitKey();
+		//
 	}
+
+	smallFrame = Mat(sz.height, sz.width, frame.type());
+	resize(frame, smallFrame, sz, 0, 0);
 
 	Mat map(sz.height, sz.width, CV_8UC1);
 	map.setTo(255);
 	drawPolyRect(map, metaData.mPoints, Scalar(0), -1);
-	Mat bgr[3];
-	split(smallFrame, bgr);
-	int selectedCh = 0;
+	int selectedCh = 1;
 	int maxDiff = 0;
 	double mn, mx;
-	
-	cvtColor(smallFrame, firstFrame, COLOR_BGR2GRAY);
+	Mat bgr[3];
+	split(smallFrame, bgr);
+	bgr[selectedCh].copyTo(firstFrame);
+	//cvtColor(smallFrame, firstFrame, COLOR_BGR2GRAY);
+
 
 	drawPolyRect(smallFrame, metaData.mPoints, Scalar(255, 0, 17), 1);
 	//cv::imshow("TargetOnFrame", smallFrame);
@@ -1068,6 +1128,8 @@ int main()
 			idx = hierarchyFirst[idx][0];
 		}
 	}
+	if (idxOfLargeInTheFirstArray < 0)
+		return -1;
 	int numOfInitCntr = (int)cntrDataFirst.size();
 	for (int i = 0; i < numOfInitCntr; ++i)
 	{
@@ -1079,18 +1141,23 @@ int main()
 	//Mat grag8ThrMar;
 	Mat frameRgb;
 	Mat frameRgbDisplayed;
-	cv::imshow("gradFirst", firstGrad);
+	//cv::imshow("gradFirst", firstGrad);
 	shot.setTo(0);
 	double measureSharpnessThr = 400.0f;// 350.0f;
 	vector<Rect> foundShotRects;
 	vector<Scalar> colors;
 	vector<ContourData> shotsCand;
 	bool isToBreak = false;
-	bool isToSave = false;
+	bool isToSave = true;
 	bool isInspectNms = false;
 	bool isFromFile = false && !isToSave;
 	//isInspectNms = true;
 	//isFromFile = true && !isToSave;
+	if (isToSave)
+	{
+		string folderCreateCommand = "mkdir \"" + dirName + fName + "\"";
+		system(folderCreateCommand.c_str());
+	}
 
 	int sumX = 0, sumY = 0;
 	while(1)
@@ -1108,9 +1175,12 @@ int main()
 			//if (cntFrameNum < 1475) continue;
 
 			resize(frame, frameRgb, sz);
-			cvtColor(frame, frame, COLOR_BGR2GRAY);
+			Mat bgr[3];
+			split(frame, bgr);
+			//bgr[selectedCh].copyTo(smallFrame);
+			//cvtColor(frame, frame, COLOR_BGR2GRAY);
 			smallFrame.copyTo(prevFrame);
-			resize(frame, smallFrame, sz);
+			resize(bgr[selectedCh], smallFrame, sz);
 			if (rot != 0)
 			{
 				transpose(smallFrame, smallFrame);
