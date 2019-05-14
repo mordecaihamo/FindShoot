@@ -25,7 +25,7 @@ void MarkRect_callback(int  event, int  x, int  y, int  flag, void *param)
 {
 	if (event == EVENT_LBUTTONDOWN) //EVENT_MOUSEMOVE
 	{
-		cout << "(" << x << ", " << y << ")" << endl;
+		std::cout << "(" << x << ", " << y << ")" << endl;
 
 		int dis[5];
 		int minDis = INT16_MAX;
@@ -76,7 +76,7 @@ void MarkRectDrag_callback(int  event, int  x, int  y, int  flag, void *param)
 		md->DisplayTarget();
 		cv::imshow(md->mWindowName, md->mDrawMat);
 		isToDraw = true;
-		cout << "(" << x << ", " << y << ")" << endl;
+		std::cout << "(" << x << ", " << y << ")" << endl;
 	}
 	else if (event == EVENT_LBUTTONUP)
 	{
@@ -85,7 +85,7 @@ void MarkRectDrag_callback(int  event, int  x, int  y, int  flag, void *param)
 	}
 	else if (event == EVENT_MOUSEMOVE && isToDraw)
 	{
-		cout << "(" << x << ", " << y << ")" << endl;
+		std::cout << "(" << x << ", " << y << ")" << endl;
 		int dis[5];
 		int minDis = INT16_MAX;
 		
@@ -134,7 +134,7 @@ void mouse_callback(int  event, int  x, int  y, int  flag, void *param)
 {
 	if (event == EVENT_LBUTTONDOWN) 
 	{
-		cout << "(" << x << ", " << y << ")";
+		std::cout << "(" << x << ", " << y << ")";
 		if (param)
 		{
 			Mat* m = (Mat*)param;
@@ -142,12 +142,12 @@ void mouse_callback(int  event, int  x, int  y, int  flag, void *param)
 			if (chNum == 3)
 			{
 				Vec3b bgrPixel = ((Mat*)param)->at<Vec3b>(y, x);
-				cout << ": (" << bgrPixel[0] << "," << bgrPixel[1] << "," << bgrPixel[2] << ")" << endl;
+				std::cout << ": (" << bgrPixel[0] << "," << bgrPixel[1] << "," << bgrPixel[2] << ")" << endl;
 			}
 			else if (chNum == 1)
 			{
 				uchar pixel = ((Mat*)param)->at<uchar>(y, x);
-				cout << ": " << (int)pixel << endl;
+				std::cout << ": " << (int)pixel << endl;
 			}
 		}
 	}
@@ -195,14 +195,14 @@ int FindShoots(char* vidName)
 	struct stat buffer;
 	if (stat(fullFileName.c_str(), &buffer) != 0)
 	{
-		cout << fullFileName << " not found!" << endl;
+		std::cout << fullFileName << " not found!" << endl;
 		fout << fullFileName << " not found!" << endl;
 	}
 	VideoCapture cap(fullFileName);
 	// Check if camera opened successfully
 	if (!cap.isOpened())
 	{
-		cout << "Error opening video stream or file" << endl;
+		std::cout << "Error opening video stream or file" << endl;
 		fout << "Error opening video stream or file" << endl;
 		fout.close();
 		return -1;
@@ -221,7 +221,7 @@ int FindShoots(char* vidName)
 	Size sz(-1, -1);
 	for (; cntFrameNum < STARTFRAME; ++cntFrameNum)
 	{
-		cout << cntFrameNum << endl;
+		std::cout << cntFrameNum << endl;
 		cap >> frame;
 		if (sz.width == -1)
 		{
@@ -285,12 +285,12 @@ int FindShoots(char* vidName)
 	else
 	{
 		metaData.FromFile(mdFileName);
-		cout << "Target:" << endl;
+		std::cout << "Target:" << endl;
 		for (Point p : metaData.mPoints)
 		{
-			cout << "(" << p.x << "," << p.y << ")" << endl;
+			std::cout << "(" << p.x << "," << p.y << ")" << endl;
 		}
-		cout << "Center: (" << metaData.mCenter.x << "," << metaData.mCenter.y << ")" << endl;
+		std::cout << "Center: (" << metaData.mCenter.x << "," << metaData.mCenter.y << ")" << endl;
 	}
 
 	Mat map(sz.height, sz.width, CV_8UC1);
@@ -319,7 +319,7 @@ int FindShoots(char* vidName)
 	rctMargin.height = sz.height - 2 * look;
 	Mat target(sz.height, sz.width, CV_8UC1);
 	Rect rectInBound = FindInboundRect(rctMargin, metaData.mPoints);
-	cout << rectInBound.x << "," << rectInBound.y << "," << rectInBound.width << "," << rectInBound.height << "," << map.cols << "," << map.rows << endl;
+	std::cout << rectInBound.x << "," << rectInBound.y << "," << rectInBound.width << "," << rectInBound.height << "," << map.cols << "," << map.rows << endl;
 	fout << rectInBound.x << "," << rectInBound.y << "," << rectInBound.width << "," << rectInBound.height << "," << map.cols << "," << map.rows << endl;
 	drawPolyRect(target, metaData.mPoints, Scalar(0), -1);
 	Mat firstGrad;
@@ -432,7 +432,7 @@ int FindShoots(char* vidName)
 			// Capture frame-by-frame
 			cap >> frame;
 			cntFrameNum++;
-			cout << cntFrameNum << endl;
+			std::cout << cntFrameNum << endl;
 
 			if (frame.size().height == 0)
 				break;
@@ -501,7 +501,7 @@ int FindShoots(char* vidName)
 		double sharpMeasure = max(max(max(abs(mnx), abs(mxx)), abs(mny)), abs(mxy));
 		if (sharpMeasure < measureSharpnessThr)
 		{
-			cout << "Skipping " << cntFrameNum << " Blured frame " << sharpMeasure << endl;
+			std::cout << "Skipping " << cntFrameNum << " Blured frame " << sharpMeasure << endl;
 			//continue;//Blured image
 		}
 
@@ -580,7 +580,7 @@ int FindShoots(char* vidName)
 			int cgYmov = abs(cdsFrame[idxOfLargeInTheArray].mCg.y - cntrDataFirst[idxOfLargeInTheFirstArray].mCg.y);
 			if (abs(x) > 10 || abs(y) > 10 || cgXmov > 10 || cgYmov > 10)
 			{
-				cout << "Skipping" << endl;
+				std::cout << "Skipping" << endl;
 				//continue;
 			}
 			//cdsFrame[idxOfLargeInTheArray].mShRct.x -= x;
@@ -633,13 +633,13 @@ int FindShoots(char* vidName)
 						//cv::imshow("cntr", shot);
 						//cv::imshow("grad", grad8Thr);
 						//cv::waitKey();
-						//cout << idxFirst << endl;
+						//std::cout << idxFirst << endl;
 						if (cntFrameNum == -256 && idx == 10 && idxFirst == 2)
 						{
 							shot.setTo(0);
 							//polylines(shot, cdsFrame[idxOfLargeInTheArray].mContour, true, 255, 1, 8);
 							//polylines(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mContour, true, 128, 1, 8);
-							cout << "Check " << idx << " with " << idxFirst << endl;
+							std::cout << "Check " << idx << " with " << idxFirst << endl;
 							polylines(shot, cd.mContour, true, 255, 1, 8);
 							polylines(shot, cdf.mContour, true, 128, 1, 8);
 							//circle(shot, cdsFrame[idxOfLargeInTheArray].mCg, 3, 255);
@@ -713,7 +713,7 @@ int FindShoots(char* vidName)
 						//cv::imshow("cntr", shot);
 						//cv::imshow("gradMat", matAdpt);
 						//cv::waitKey();
-						//cout << "Num of shots in frame " << cntFrameNum << " is " << shotsCand.size() << endl;
+						//std::cout << "Num of shots in frame " << cntFrameNum << " is " << shotsCand.size() << endl;
 						//cntrDataFirst.push_back(cd);
 					}
 				}
@@ -860,14 +860,14 @@ int main()
 	struct stat buffer;
 	if (stat(fullFileName.c_str(), &buffer) != 0)
 	{
-		cout << fullFileName << " not found!" << endl;
+		std::cout << fullFileName << " not found!" << endl;
 		fout << fullFileName << " not found!" << endl;
 	}
 	VideoCapture cap(fullFileName);
 	// Check if camera opened successfully
 	if(!cap.isOpened())
 	{
-		cout << "Error opening video stream or file" << endl;
+		std::cout << "Error opening video stream or file" << endl;
 		fout << "Error opening video stream or file" << endl;
 		fout.close();
 		return -1;
@@ -886,7 +886,7 @@ int main()
 	Size sz(-1, -1);
 	for (; cntFrameNum < STARTFRAME; ++cntFrameNum)
 	{
-		cout << cntFrameNum << endl;
+		std::cout << cntFrameNum << endl;
 		cap >> frame;
 		if (sz.width == -1)
 		{
@@ -926,7 +926,8 @@ int main()
 		transpose(smallFrame, smallFrame);
 	}
 	ShootTargetMetaData metaData;
-	
+	int desiredTargetWidth = 300;
+	int marginsTarget = 220;
 	if (stat(mdFileName.c_str(), &buffer) != 0)
 	{
 		int margins = 10;
@@ -952,7 +953,7 @@ int main()
 		int k = cv::waitKey();
 		float targetWidth = AucDis((float)metaData.mPoints[0].x, (float)metaData.mPoints[0].y, (float)metaData.mPoints[1].x, (float)metaData.mPoints[1].y);
 		//Make sure that the width of the target is 300 pix
-		rat = 300 / targetWidth;
+		rat = desiredTargetWidth / targetWidth;
 		
 		sz.width = round(sz.width*rat);
 		sz.height = round(sz.height*rat);
@@ -971,23 +972,23 @@ int main()
 	else
 	{
 		metaData.FromFile(mdFileName);
-		cout << "Target:"<<endl;
+		std::cout << "Target:"<<endl;
 		for(Point p: metaData.mPoints)
 		{ 
-			cout << "(" << p.x << "," << p.y << ")" << endl;
+			std::cout << "(" << p.x << "," << p.y << ")" << endl;
 		}
-		cout << "Center: (" << metaData.mCenter.x << "," << metaData.mCenter.y << ")"<<endl;
+		std::cout << "Center: (" << metaData.mCenter.x << "," << metaData.mCenter.y << ")"<<endl;
 
 		float targetWidth = AucDis((float)metaData.mPoints[0].x, (float)metaData.mPoints[0].y, (float)metaData.mPoints[1].x, (float)metaData.mPoints[1].y);
 		//Make sure that the width of the target is 300 pix
-		rat = 300 / targetWidth;
+		rat = desiredTargetWidth / targetWidth;
 
 		sz.width = round(largeSz.width*rat);
 		sz.height = round(largeSz.height*rat);
 		//
-		resize(frame, smallFrame, sz, 0, 0);
-		drawPolyRect(frame, metaData.mPoints, Scalar(255, 0, 17), 1);
-		cv::imshow("TargetOnFrame", frame);
+		//resize(frame, smallFrame, sz, 0, 0);
+		//drawPolyRect(frame, metaData.mPoints, Scalar(255, 0, 17), 1);
+		//cv::imshow("TargetOnFrame", frame);
 		//
 		for (int i = 0; i < 4; ++i)
 		{
@@ -998,16 +999,43 @@ int main()
 		metaData.mCenter.y = round(metaData.mCenter.y*rat);
 
 		//
-		drawPolyRect(smallFrame, metaData.mPoints, Scalar(255, 0, 17), 1);
-		cv::imshow("TargetOnSmallFrame", smallFrame);
-		cv::waitKey();
+		//drawPolyRect(smallFrame, metaData.mPoints, Scalar(255, 0, 17), 1);
+		//cv::imshow("TargetOnSmallFrame", smallFrame);
+		//cv::waitKey();
 		//
 	}
 
 	smallFrame = Mat(sz.height, sz.width, frame.type());
 	resize(frame, smallFrame, sz, 0, 0);
 
-	Mat map(sz.height, sz.width, CV_8UC1);
+	bool isToCrop = false;
+	Rect cropRct;
+	if (sz.width > 800)
+	{
+		isToCrop = true;
+		cropRct.x = max(0, metaData.mPoints[0].x - marginsTarget);
+		cropRct.width = metaData.mPoints[1].x - cropRct.x + marginsTarget;
+		cropRct.y = 0;
+		cropRct.height = sz.height;
+		if (sz.height > 1000)
+		{
+			cropRct.y= max(0, metaData.mPoints[0].y - marginsTarget);
+			cropRct.height = metaData.mPoints[3].y - cropRct.y + marginsTarget;
+		}
+		//Update the target positions
+		for (int i = 0; i < 4; ++i)
+		{
+			metaData.mPoints[i].x -= cropRct.x;
+			metaData.mPoints[i].y -= cropRct.y;
+		}
+		metaData.mCenter.x -= cropRct.x;
+		metaData.mCenter.y -= cropRct.y;
+	}
+	smallFrame = smallFrame(cropRct);
+	Size cropSz;
+	cropSz.width = cropRct.width;
+	cropSz.height = cropRct.height;
+	Mat map(cropSz.height, cropSz.width, CV_8UC1);
 	map.setTo(255);
 	drawPolyRect(map, metaData.mPoints, Scalar(0), -1);
 	int selectedCh = 1;
@@ -1030,11 +1058,11 @@ int main()
 	int look = 20;
 	rctMargin.x = look;
 	rctMargin.y = look;
-	rctMargin.width = sz.width - 2 * look;
-	rctMargin.height = sz.height - 2 * look;
-	Mat target(sz.height, sz.width, CV_8UC1);
+	rctMargin.width = cropSz.width - 2 * look;
+	rctMargin.height = cropSz.height - 2 * look;
+	Mat target(cropSz.height, cropSz.width, CV_8UC1);
 	Rect rectInBound = FindInboundRect(rctMargin, metaData.mPoints);
-	cout << rectInBound.x << "," << rectInBound.y << "," << rectInBound.width << "," << rectInBound.height << "," << map.cols << "," << map.rows << endl;
+	std::cout << rectInBound.x << "," << rectInBound.y << "," << rectInBound.width << "," << rectInBound.height << "," << map.cols << "," << map.rows << endl;
 	fout << rectInBound.x << "," << rectInBound.y << "," << rectInBound.width << "," << rectInBound.height << "," << map.cols << "," << map.rows << endl;
 	drawPolyRect(target, metaData.mPoints, Scalar(0), -1);
 	Mat firstGrad;
@@ -1060,11 +1088,14 @@ int main()
 	double thr = 128 + 7;
 	int maxGrayLevelAllowed = 150;
 	
+	resize(firstFrameThrs, firstFrameThrs, sz);
+	if(isToCrop)
+		firstFrameThrs = firstFrameThrs(cropRct);
 //#undef min	cv::min(firstFrame, maxGrayLevelAllowed, firstFrame);
 	Canny(firstFrameThrs, firstGrad, thrOfGrad, 2.75 * thrOfGrad);
 	firstGrad.setTo(0, map);
-	Mat shotsHistogramMat(sz.height, sz.width, CV_32SC1);
-	Mat shotsFrameNumMat(sz.height, sz.width, CV_32SC1);
+	Mat shotsHistogramMat(cropSz.height, cropSz.width, CV_32SC1);
+	Mat shotsFrameNumMat(cropSz.height, cropSz.width, CV_32SC1);
 	shotsHistogramMat.setTo(1);
 	shotsHistogramMat.setTo(0, map);
 	shotsFrameNumMat.setTo(0);
@@ -1091,7 +1122,7 @@ int main()
 		//for (; idx >= 0; idx = hierarchyFirst[idx][0])
 		while(idx >= 0)
 		{
-			ContourData cd(contoursFirst[idx], sz,cntFrameNum,idx);
+			ContourData cd(contoursFirst[idx], cropSz,cntFrameNum,idx);
 			if (cd.mShRct.width == 0 || cd.mShRct.height == 0)
 				continue;
 			char buf[256] = { '\0' };
@@ -1137,7 +1168,7 @@ int main()
 		cntrDataFirst[i].SetDistFromLargeCenter(cntrDataFirst[idxOfLargeInTheFirstArray].mCg);
 	}
 
-	Mat grad8Thr, matAdpt(sz.height, sz.width, CV_8UC1);
+	Mat grad8Thr, matAdpt(cropSz.height, cropSz.width, CV_8UC1);
 	//Mat grag8ThrMar;
 	Mat frameRgb;
 	Mat frameRgbDisplayed;
@@ -1148,7 +1179,7 @@ int main()
 	vector<Scalar> colors;
 	vector<ContourData> shotsCand;
 	bool isToBreak = false;
-	bool isToSave = true;
+	bool isToSave = false;
 	bool isInspectNms = false;
 	bool isFromFile = false && !isToSave;
 	//isInspectNms = true;
@@ -1168,19 +1199,23 @@ int main()
 			// Capture frame-by-frame
 			cap >> frame;
 			cntFrameNum++;
-			cout << cntFrameNum << endl;
+			std::cout << cntFrameNum << endl;
 
 			if (frame.size().height == 0)
 				break;
 			//if (cntFrameNum < 1475) continue;
 
 			resize(frame, frameRgb, sz);
+			if (isToCrop)
+				frameRgb = frameRgb(cropRct);
 			Mat bgr[3];
 			split(frame, bgr);
 			//bgr[selectedCh].copyTo(smallFrame);
 			//cvtColor(frame, frame, COLOR_BGR2GRAY);
 			smallFrame.copyTo(prevFrame);
 			resize(bgr[selectedCh], smallFrame, sz);
+			if (isToCrop)
+				smallFrame = smallFrame(cropRct);
 			if (rot != 0)
 			{
 				transpose(smallFrame, smallFrame);
@@ -1222,7 +1257,7 @@ int main()
 		Mat matDx, matDy;
 		Sobel(smallFrame, matDx, CV_16S, 1, 0);
 		Sobel(smallFrame, matDy, CV_16S, 0, 1);
-		Mat mapMove(sz.height, sz.width, CV_8UC1);
+		Mat mapMove(cropSz.height, cropSz.width, CV_8UC1);
 		mapMove.setTo(255);
 		Point pointsRect[4];
 
@@ -1240,7 +1275,7 @@ int main()
 		double sharpMeasure = max(max(max(abs(mnx), abs(mxx)), abs(mny)), abs(mxy));
 		if (sharpMeasure < measureSharpnessThr)
 		{
-			cout << "Skipping " << cntFrameNum << " Blured frame " << sharpMeasure << endl;
+			std::cout << "Skipping " << cntFrameNum << " Blured frame " << sharpMeasure << endl;
 			//continue;//Blured image
 		}
 			
@@ -1271,7 +1306,7 @@ int main()
 			{
 				if (contours[idx].size() > 3)
 				{
-					ContourData cd(contours[idx], sz);
+					ContourData cd(contours[idx], cropSz);
 					if (cd.mShRct.width == 0 || cd.mShRct.height == 0)
 						continue;
 					//shot.setTo(0);
@@ -1307,7 +1342,7 @@ int main()
 			/*If a n out of focus frame than the contours will break, skip these frames*/
 			if (rectAreaMax / (float)rectAreaMaxFirst < 0.65)
 			{
-				//cout <<"FindShot:*****Skipping "<< cntFrameNum<<" area "<< rectAreaMax / (float)rectAreaMaxFirst << endl;
+				//std::cout <<"FindShot:*****Skipping "<< cntFrameNum<<" area "<< rectAreaMax / (float)rectAreaMaxFirst << endl;
 				//cv::imshow("gradThr", grad8Thr);
 				//cv::imshow("skipping", frameRgb);
 				//cv::waitKey();
@@ -1333,7 +1368,7 @@ int main()
 			int cgYmov = abs(cdsFrame[idxOfLargeInTheArray].mCg.y - cntrDataFirst[idxOfLargeInTheFirstArray].mCg.y);
 			if (abs(x) > 10 || abs(y) > 10 || cgXmov > 10 || cgYmov > 10)
 			{
-				cout << "Skipping" << endl;
+				std::cout << "Skipping" << endl;
 				//continue;
 			}
 			//cdsFrame[idxOfLargeInTheArray].mShRct.x -= x;
@@ -1386,13 +1421,13 @@ int main()
 						//cv::imshow("cntr", shot);
 						//cv::imshow("grad", grad8Thr);
 						//cv::waitKey();
-						//cout << idxFirst << endl;
+						//std::cout << idxFirst << endl;
 						if (cntFrameNum == -256 && idx == 10 && idxFirst == 2)
 						{
 							shot.setTo(0);
 							//polylines(shot, cdsFrame[idxOfLargeInTheArray].mContour, true, 255, 1, 8);
 							//polylines(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mContour, true, 128, 1, 8);
-							cout << "Check " << idx << " with " << idxFirst << endl;
+							std::cout << "Check " << idx << " with " << idxFirst << endl;
 							polylines(shot, cd.mContour, true, 255, 1, 8);
 							polylines(shot, cdf.mContour, true, 128, 1, 8);
 							//circle(shot, cdsFrame[idxOfLargeInTheArray].mCg, 3, 255);
@@ -1466,7 +1501,7 @@ int main()
 						//cv::imshow("cntr", shot);
 						//cv::imshow("gradMat", matAdpt);
 						//cv::waitKey();
-						//cout << "Num of shots in frame " << cntFrameNum << " is " << shotsCand.size() << endl;
+						//std::cout << "Num of shots in frame " << cntFrameNum << " is " << shotsCand.size() << endl;
 						//cntrDataFirst.push_back(cd);
 					}
 				}
@@ -1479,7 +1514,7 @@ int main()
 		//else
 		//	NMS(shotsCand,smallFrame, pntMov);
 		int numOfShotsFound = (int)shotsCand.size();
-		cout << "Num of shots after NMS in frame " << cntFrameNum << " is ," << numOfShotsFound << endl;
+		std::cout << "Num of shots after NMS in frame " << cntFrameNum << " is ," << numOfShotsFound << endl;
 		fout << "Num of shots after NMS in frame " << cntFrameNum << " is ," << numOfShotsFound << endl;
 		shot.setTo(0);
 		for (int rc = 0; rc < numOfShotsFound; ++rc)
@@ -1518,9 +1553,9 @@ int main()
 			shotsHistogramMat += shot32;
 
 			/*Mark the shots pixels with the frame num*/
-			for (int r = 0; r < sz.height; ++r)
+			for (int r = 0; r < cropSz.height; ++r)
 			{	
-				for (int c = 0; c < sz.width; ++c)
+				for (int c = 0; c < cropSz.width; ++c)
 				{
 					auto val = shot.at<UCHAR>(r, c);
 					auto valFrameNum = shotsFrameNumMat.at<int>(r, c);
