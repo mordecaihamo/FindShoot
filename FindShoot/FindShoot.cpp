@@ -175,23 +175,20 @@ int FindShoots(char* vidName)
 	}
 	fName = fName.substr(0, posOfLastDot);
 
-	//String fName = "MVI_4"; String extName = ".MOV";
-	//String fName = "MVI_1"; String extName = ".MOV";
-	//String fName = "MVI_2"; String extName = ".MOV";
-	//String fName = "VID-20181125-WA0005"; String extName = ".mp4"; very bad video
-
 	ofstream fout;
 	fout.open(dirName + fName + ".csv");
-
-//	String fullFileName = dirName + fName + extName;
+	//String fullFileName = dirName + fName + extName;
 	String mdFileName = dirName + fName + ".txt";
-	String s1 = dirName + fName + "/HistOfShots.xml";
-	String s2 = dirName + fName + "/TimeOfShots.xml";
-	String s3 = dirName + fName + "/ShotsResults.csv";
-	AnalyzeShotsResult ana(s1, s2, mdFileName);
-	ana.Compute(s3);
-	return 0;
 
+	if (0)
+	{
+		String s1 = dirName + fName + "/HistOfShots.xml";
+		String s2 = dirName + fName + "/TimeOfShots.xml";
+		String s3 = dirName + fName + "/ShotsResults.csv";
+		AnalyzeShotsResult ana(s1, s2, mdFileName);
+		ana.Compute(s3);
+		return 0;
+	}
 	struct stat buffer;
 	if (stat(fullFileName.c_str(), &buffer) != 0)
 	{
@@ -228,9 +225,10 @@ int FindShoots(char* vidName)
 			sz = frame.size();
 			if (sz.width != 740)
 			{
-				sz.height = cvRound(sz.height * (740.0f / sz.width));
+				sz.height = cvRound(sz.height*(740.0f / sz.width));
 				sz.width = 740;
 			}
+
 			sumFrame = Mat(sz, CV_16UC3);
 			smallFrame = Mat(sz.height, sz.width, frame.type());
 			firstFrameThrs = Mat(sz.height, sz.width, CV_8UC1);
@@ -243,12 +241,16 @@ int FindShoots(char* vidName)
 			frameNumAcc++;
 			resize(frame, smallFrame, sz, 0, 0);
 			cvtColor(smallFrame, firstFrame, COLOR_BGR2GRAY);
-			adaptiveThreshold(firstFrame, tempSumFrame, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, (((int)floor(1.1 * sz.width)) | 1), 0);
+			adaptiveThreshold(firstFrame, tempSumFrame, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, (((int)floor(1.1*sz.width)) | 1), 0);
 			firstFrameThrs = firstFrameThrs | tempSumFrame;
 		}
 	}
 	bitwise_not(firstFrameThrs, firstFrameThrs);
 	bitwise_not(tempSumFrame, tempSumFrame);
+
+	Size largeSz = frame.size();
+	float ratSmall2Large = (float)largeSz.width / (float)sz.width;
+	float rat = 1.0f;
 
 	if (rot != 0)
 	{
@@ -256,7 +258,8 @@ int FindShoots(char* vidName)
 		transpose(smallFrame, smallFrame);
 	}
 	ShootTargetMetaData metaData;
-
+	int desiredTargetWidth = 300;
+	int marginsTarget = 220;
 	if (stat(mdFileName.c_str(), &buffer) != 0)
 	{
 		int margins = 10;
@@ -280,6 +283,22 @@ int FindShoots(char* vidName)
 		imshow("EnterPositions", metaData.mOrgMat);
 		cv::setMouseCallback("EnterPositions", MarkRectDrag_callback, &metaData);
 		int k = cv::waitKey();
+		float targetWidth = AucDis((float)metaData.mPoints[0].x, (float)metaData.mPoints[0].y, (float)metaData.mPoints[1].x, (float)metaData.mPoints[1].y);
+		//Make sure that the width of the target is 300 pix
+		rat = desiredTargetWidth / targetWidth;
+
+		sz.width = round(sz.width*rat);
+		sz.height = round(sz.height*rat);
+		for (int i = 0; i < 4; ++i)
+		{
+			metaData.mPoints[i].x = round(metaData.mPoints[i].x*ratSmall2Large);
+			metaData.mPoints[i].y = round(metaData.mPoints[i].y*ratSmall2Large);
+		}
+		metaData.mCenter.x = round(metaData.mCenter.x*ratSmall2Large);
+		metaData.mCenter.y = round(metaData.mCenter.y*ratSmall2Large);
+		drawPolyRect(frame, metaData.mPoints, Scalar(255, 0, 17), 1);
+		cv::imshow("TargetOnFrame", frame);
+		cv::waitKey();
 		metaData.ToFile(mdFileName);
 	}
 	else
@@ -291,18 +310,74 @@ int FindShoots(char* vidName)
 			std::cout << "(" << p.x << "," << p.y << ")" << endl;
 		}
 		std::cout << "Center: (" << metaData.mCenter.x << "," << metaData.mCenter.y << ")" << endl;
+
+		float targetWidth = AucDis((float)metaData.mPoints[0].x, (float)metaData.mPoints[0].y, (float)metaData.mPoints[1].x, (float)metaData.mPoints[1].y);
+		//Make sure that the width of the target is 300 pix
+		rat = desiredTargetWidth / targetWidth;
+
+		sz.width = round(largeSz.width*rat);
+		sz.height = round(largeSz.height*rat);
+		//
+		//resize(frame, smallFrame, sz, 0, 0);
+		//drawPolyRect(frame, metaData.mPoints, Scalar(255, 0, 17), 1);
+		//cv::imshow("TargetOnFrame", frame);
+		//
+		for (int i = 0; i < 4; ++i)
+		{
+			metaData.mPoints[i].x = round(metaData.mPoints[i].x*rat);
+			metaData.mPoints[i].y = round(metaData.mPoints[i].y*rat);
+		}
+		metaData.mCenter.x = round(metaData.mCenter.x*rat);
+		metaData.mCenter.y = round(metaData.mCenter.y*rat);
+
+		//
+		//drawPolyRect(smallFrame, metaData.mPoints, Scalar(255, 0, 17), 1);
+		//cv::imshow("TargetOnSmallFrame", smallFrame);
+		//cv::waitKey();
+		//
 	}
 
-	Mat map(sz.height, sz.width, CV_8UC1);
+	smallFrame = Mat(sz.height, sz.width, frame.type());
+	resize(frame, smallFrame, sz, 0, 0);
+
+	bool isToCrop = false;
+	Rect cropRct;
+	if (sz.width > 800)
+	{
+		isToCrop = true;
+		cropRct.x = max(0, metaData.mPoints[0].x - marginsTarget);
+		cropRct.width = metaData.mPoints[1].x - cropRct.x + marginsTarget;
+		cropRct.y = 0;
+		cropRct.height = sz.height;
+		if (sz.height > 1000)
+		{
+			cropRct.y = max(0, metaData.mPoints[0].y - marginsTarget);
+			cropRct.height = metaData.mPoints[3].y - cropRct.y + marginsTarget;
+		}
+		//Update the target positions
+		for (int i = 0; i < 4; ++i)
+		{
+			metaData.mPoints[i].x -= cropRct.x;
+			metaData.mPoints[i].y -= cropRct.y;
+		}
+		metaData.mCenter.x -= cropRct.x;
+		metaData.mCenter.y -= cropRct.y;
+	}
+	smallFrame = smallFrame(cropRct);
+	Size cropSz;
+	cropSz.width = cropRct.width;
+	cropSz.height = cropRct.height;
+	Mat map(cropSz.height, cropSz.width, CV_8UC1);
 	map.setTo(255);
 	drawPolyRect(map, metaData.mPoints, Scalar(0), -1);
-	Mat bgr[3];
-	split(smallFrame, bgr);
-	int selectedCh = 0;
+	int selectedCh = 1;
 	int maxDiff = 0;
 	double mn, mx;
+	Mat bgr[3];
+	split(smallFrame, bgr);
+	bgr[selectedCh].copyTo(firstFrame);
+	//cvtColor(smallFrame, firstFrame, COLOR_BGR2GRAY);
 
-	cvtColor(smallFrame, firstFrame, COLOR_BGR2GRAY);
 
 	drawPolyRect(smallFrame, metaData.mPoints, Scalar(255, 0, 17), 1);
 	//cv::imshow("TargetOnFrame", smallFrame);
@@ -315,9 +390,9 @@ int FindShoots(char* vidName)
 	int look = 20;
 	rctMargin.x = look;
 	rctMargin.y = look;
-	rctMargin.width = sz.width - 2 * look;
-	rctMargin.height = sz.height - 2 * look;
-	Mat target(sz.height, sz.width, CV_8UC1);
+	rctMargin.width = cropSz.width - 2 * look;
+	rctMargin.height = cropSz.height - 2 * look;
+	Mat target(cropSz.height, cropSz.width, CV_8UC1);
 	Rect rectInBound = FindInboundRect(rctMargin, metaData.mPoints);
 	std::cout << rectInBound.x << "," << rectInBound.y << "," << rectInBound.width << "," << rectInBound.height << "," << map.cols << "," << map.rows << endl;
 	fout << rectInBound.x << "," << rectInBound.y << "," << rectInBound.width << "," << rectInBound.height << "," << map.cols << "," << map.rows << endl;
@@ -332,7 +407,7 @@ int FindShoots(char* vidName)
 	smallFrame.copyTo(firstFrame);
 
 	minMaxIdx(firstFrame, &ffMin, &ffMax, &ffMinIdx, &ffMaxIdx, mapNot);
-	int bg = cvFloor((ffMin + ffMax) * 0.5);
+	int bg = cvFloor((ffMin + ffMax)*0.5);
 	cv::threshold(target, target, 1, 255, THRESH_BINARY);
 
 	//Mat shiftMap = map(Rect(1, 1, sz.width - 1, sz.height - 1));
@@ -345,15 +420,21 @@ int FindShoots(char* vidName)
 	double thr = 128 + 7;
 	int maxGrayLevelAllowed = 150;
 
+	resize(firstFrameThrs, firstFrameThrs, sz);
+	if (isToCrop)
+		firstFrameThrs = firstFrameThrs(cropRct);
 	//#undef min	cv::min(firstFrame, maxGrayLevelAllowed, firstFrame);
 	Canny(firstFrameThrs, firstGrad, thrOfGrad, 2.75 * thrOfGrad);
 	firstGrad.setTo(0, map);
-	Mat shotsHistogramMat(sz.height, sz.width, CV_32SC1);
-	Mat shotsFrameNumMat(sz.height, sz.width, CV_32SC1);
+	Mat shotsHistogramMat(cropSz.height, cropSz.width, CV_32SC1);
+	Mat shotsFrameNumMat(cropSz.height, cropSz.width, CV_32SC1);
 	shotsHistogramMat.setTo(1);
 	shotsHistogramMat.setTo(0, map);
 	shotsFrameNumMat.setTo(0);
-
+	//cv::imshow("firstFrame", firstFrame);
+	//cv::imshow("firstGrad", firstGrad);
+	//cv::waitKey();
+	//cv::threshold(firstGrad, firstGrad, thrOfGrad, 255, THRESH_BINARY);
 	//Map all the contours of the first frame
 	vector<vector<Point> > contoursFirst;
 	vector<Vec4i> hierarchyFirst;
@@ -373,7 +454,7 @@ int FindShoots(char* vidName)
 		//for (; idx >= 0; idx = hierarchyFirst[idx][0])
 		while (idx >= 0)
 		{
-			ContourData cd(contoursFirst[idx], sz, cntFrameNum, idx);
+			ContourData cd(contoursFirst[idx], cropSz, cntFrameNum, idx);
 			if (cd.mShRct.width == 0 || cd.mShRct.height == 0)
 				continue;
 			char buf[256] = { '\0' };
@@ -387,13 +468,31 @@ int FindShoots(char* vidName)
 				pntCgMaxFirst = cd.mCg;
 				idxOfLargeInTheFirstArray = (int)cntrDataFirst.size();
 			}
-			cntrDataFirst.push_back(cd);
-			
+			//if (cntFrameNum == 160)
+			//{
+			//	shot.setTo(0);
+			//	drawContours(shot, contoursFirst, idx, 255, 0, 8, hierarchyFirst);
+			//	cv::setMouseCallback("shot", mouse_callback, &metaData);
+			//	cv::imshow("cntr", shot);
+			//	cv::waitKey();
+			//}
+
+			//if (cd.mRatioFromAll < 0.0001)//too small delete it
+			//{
+			//	contoursFirst.erase(contoursFirst.begin() + idx);
+			//	--idx;
+			//}
+			//else
+			{
+				cntrDataFirst.push_back(cd);
+			}
 			if (idx < 0)
 				break;
 			idx = hierarchyFirst[idx][0];
 		}
 	}
+	if (idxOfLargeInTheFirstArray < 0)
+		return -1;
 	int numOfInitCntr = (int)cntrDataFirst.size();
 	for (int i = 0; i < numOfInitCntr; ++i)
 	{
@@ -401,11 +500,11 @@ int FindShoots(char* vidName)
 		cntrDataFirst[i].SetDistFromLargeCenter(cntrDataFirst[idxOfLargeInTheFirstArray].mCg);
 	}
 
-	Mat grad8Thr, matAdpt(sz.height, sz.width, CV_8UC1);
+	Mat grad8Thr, matAdpt(cropSz.height, cropSz.width, CV_8UC1);
 	//Mat grag8ThrMar;
 	Mat frameRgb;
 	Mat frameRgbDisplayed;
-	cv::imshow("gradFirst", firstGrad);
+	//cv::imshow("gradFirst", firstGrad);
 	shot.setTo(0);
 	double measureSharpnessThr = 400.0f;// 350.0f;
 	vector<Rect> foundShotRects;
@@ -439,9 +538,16 @@ int FindShoots(char* vidName)
 			//if (cntFrameNum < 1475) continue;
 
 			resize(frame, frameRgb, sz);
-			cvtColor(frame, frame, COLOR_BGR2GRAY);
+			if (isToCrop)
+				frameRgb = frameRgb(cropRct);
+			Mat bgr[3];
+			split(frame, bgr);
+			//bgr[selectedCh].copyTo(smallFrame);
+			//cvtColor(frame, frame, COLOR_BGR2GRAY);
 			smallFrame.copyTo(prevFrame);
-			resize(frame, smallFrame, sz);
+			resize(bgr[selectedCh], smallFrame, sz);
+			if (isToCrop)
+				smallFrame = smallFrame(cropRct);
 			if (rot != 0)
 			{
 				transpose(smallFrame, smallFrame);
@@ -473,7 +579,7 @@ int FindShoots(char* vidName)
 		FindMovment(firstFrame, smallFrame, x, y, rectInBound, look, false, false);
 		Point pntMov(x, y);
 
-		adaptiveThreshold(smallFrame, matAdpt, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, (((int)floor(1.1 * sz.width)) | 1), 0);
+		adaptiveThreshold(smallFrame, matAdpt, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, (((int)floor(1.1*sz.width)) | 1), 0);
 		cv::imshow("matAdptBeforeClean", matAdpt);
 		Canny(matAdpt, grad8Thr, 0, 255, 5, true);
 		Mat canMat;
@@ -483,7 +589,7 @@ int FindShoots(char* vidName)
 		Mat matDx, matDy;
 		Sobel(smallFrame, matDx, CV_16S, 1, 0);
 		Sobel(smallFrame, matDy, CV_16S, 0, 1);
-		Mat mapMove(sz.height, sz.width, CV_8UC1);
+		Mat mapMove(cropSz.height, cropSz.width, CV_8UC1);
 		mapMove.setTo(255);
 		Point pointsRect[4];
 
@@ -532,7 +638,7 @@ int FindShoots(char* vidName)
 			{
 				if (contours[idx].size() > 3)
 				{
-					ContourData cd(contours[idx], sz);
+					ContourData cd(contours[idx], cropSz);
 					if (cd.mShRct.width == 0 || cd.mShRct.height == 0)
 						continue;
 					//shot.setTo(0);
@@ -565,7 +671,15 @@ int FindShoots(char* vidName)
 					break;
 				idx = hierarchy[idx][0];
 			}
-			
+			/*If a n out of focus frame than the contours will break, skip these frames*/
+			if (rectAreaMax / (float)rectAreaMaxFirst < 0.65)
+			{
+				//std::cout <<"FindShot:*****Skipping "<< cntFrameNum<<" area "<< rectAreaMax / (float)rectAreaMaxFirst << endl;
+				//cv::imshow("gradThr", grad8Thr);
+				//cv::imshow("skipping", frameRgb);
+				//cv::waitKey();
+				//continue;
+			}
 			//If the contour is repeating itself from the inside, return the inside contour
 			vector<Point> rpt = cdsFrame[idxOfLargeInTheArray].FixSlightlyOpenContour();
 			if ((int)rpt.size() > 0)
@@ -576,6 +690,12 @@ int FindShoots(char* vidName)
 					(int)cdsFrame.size()));
 			}
 			/*This is the movment between the frames*/
+			//pntCgMax = cdsFrame[idxOfLargeInTheArray].mCg;
+			//x = cdsFrame[idxOfLargeInTheArray].mShRct.x - cntrDataFirst[idxOfLargeInTheFirstArray].mShRct.x;
+			//y = cdsFrame[idxOfLargeInTheArray].mShRct.y - cntrDataFirst[idxOfLargeInTheFirstArray].mShRct.y;
+
+			//x = (int)round(cdsFrame[idxOfLargeInTheArray].mCorners[0].x - cntrDataFirst[idxOfLargeInTheFirstArray].mCorners[0].x);
+			//y = (int)round(cdsFrame[idxOfLargeInTheArray].mCorners[0].y - cntrDataFirst[idxOfLargeInTheFirstArray].mCorners[0].y);
 			int cgXmov = abs(cdsFrame[idxOfLargeInTheArray].mCg.x - cntrDataFirst[idxOfLargeInTheFirstArray].mCg.x);
 			int cgYmov = abs(cdsFrame[idxOfLargeInTheArray].mCg.y - cntrDataFirst[idxOfLargeInTheFirstArray].mCg.y);
 			if (abs(x) > 10 || abs(y) > 10 || cgXmov > 10 || cgYmov > 10)
@@ -719,8 +839,15 @@ int FindShoots(char* vidName)
 				}
 			}
 		}
-
+		//if (isFromFile && isInspectNms)
+		//{
+		//	Mat matToDraw(sz.height, sz.width, CV_8UC1);		NMS(shotsCand, smallFrame, pntMov,&matToDraw);
+		//}
+		//else
+		//	NMS(shotsCand,smallFrame, pntMov);
 		int numOfShotsFound = (int)shotsCand.size();
+		std::cout << "Num of shots after NMS in frame " << cntFrameNum << " is ," << numOfShotsFound << endl;
+		fout << "Num of shots after NMS in frame " << cntFrameNum << " is ," << numOfShotsFound << endl;
 		shot.setTo(0);
 		for (int rc = 0; rc < numOfShotsFound; ++rc)
 		{
@@ -758,9 +885,9 @@ int FindShoots(char* vidName)
 			shotsHistogramMat += shot32;
 
 			/*Mark the shots pixels with the frame num*/
-			for (int r = 0; r < sz.height; ++r)
+			for (int r = 0; r < cropSz.height; ++r)
 			{
-				for (int c = 0; c < sz.width; ++c)
+				for (int c = 0; c < cropSz.width; ++c)
 				{
 					auto val = shot.at<UCHAR>(r, c);
 					auto valFrameNum = shotsFrameNumMat.at<int>(r, c);
@@ -790,7 +917,7 @@ int FindShoots(char* vidName)
 		cv::imshow("matAdpt", matAdpt);
 		cv::imshow("Frame", smallFrame);
 		cv::imshow("gradThr", grad8Thr);
-		cv::setMouseCallback("gradThr", mouse_callback, (void*)& grad8Thr);
+		cv::setMouseCallback("gradThr", mouse_callback, (void*)&grad8Thr);
 		// Press  ESC on keyboard to exit
 		if (0 && !isFromFile)//cntFrameNum > 680)//isToBreak)//
 		{
@@ -828,6 +955,7 @@ int FindShoots(char* vidName)
 
 	return 0;
 }
+
 
 int main()
 {
