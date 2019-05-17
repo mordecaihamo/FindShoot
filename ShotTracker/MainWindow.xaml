@@ -5,13 +5,15 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ShotTracker"
         mc:Ignorable="d"
-        Title="MainWindow" Height="1000.63" Width="1700">
-    <Grid x:Name="grid" Margin="-32,-49,-19,-66">
-        <Image x:Name="imgSource" HorizontalAlignment="Left" Height="416" Margin="529,134,0,0" VerticalAlignment="Top" Width="740" Stretch="Fill" Source="C:\moti\FindShoot\MVI_3\61.bmp"/>
-        <Image x:Name="imgHist" HorizontalAlignment="Left" Height="416" Margin="529,575,0,0" VerticalAlignment="Top" Width="740" Source="C:\moti\FindShoot\MVI_3\90.bmp"/>
+        Title="MainWindow" Height="1000.63" Width="1280.073">
+    <Grid x:Name="grid" Margin="-32,-49,0,-21" HorizontalAlignment="Left" Width="1316">
+        <Image x:Name="imgSource" HorizontalAlignment="Left" Height="416" Margin="529,134,0,0" VerticalAlignment="Top" Width="740" Stretch="Fill"/>
+        <Image x:Name="imgHist" HorizontalAlignment="Left" Height="416" Margin="529,575,0,0" VerticalAlignment="Top" Width="740"/>
         <GroupBox x:Name="gbMainFunc" Header="" HorizontalAlignment="Left" Height="329" Margin="79,134,0,0" VerticalAlignment="Top" Width="376">
             <Grid HorizontalAlignment="Left" Height="332" Margin="0,-13,-2,-12" VerticalAlignment="Top" Width="366">
                 <Button x:Name="btnPlay" Content="&gt;" HorizontalAlignment="Left" Margin="56,10,0,0" VerticalAlignment="Top" Width="254" Height="117" FontSize="72" Click="BtnPlay_Click"/>
+                <CheckBox x:Name="chkBoxIsDbg" Content="Debug" HorizontalAlignment="Left" Margin="81,268,0,0" VerticalAlignment="Top" Height="29" RenderTransformOrigin="-0.984,0.169" Width="75" FontSize="16"/>
+                <Button x:Name="btnAnalyze" Content="Analyze" HorizontalAlignment="Left" Margin="56,153,0,0" VerticalAlignment="Top" Width="254" Height="67" FontSize="36" Click="BtnAnalyze_Click"/>
             </Grid>
         </GroupBox>
         <GroupBox x:Name="gpBrowse" Header="" HorizontalAlignment="Left" Height="51" Margin="79,62,0,0" VerticalAlignment="Top" Width="1167">

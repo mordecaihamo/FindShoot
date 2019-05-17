@@ -156,7 +156,40 @@ void mouse_callback(int  event, int  x, int  y, int  flag, void *param)
 using namespace cv;
 using namespace std;
 
-int FindShoots(char* vidName)
+int Analyze(char* vidName, int isDebugMode)
+{
+	String fullFileName(vidName);
+	size_t posOfLastSlash = fullFileName.find_last_of("/\\");
+	String dirName = "";
+	String fName = "";
+	String extName = "";
+	if (posOfLastSlash != string::npos)
+	{
+		dirName = fullFileName.substr(0, posOfLastSlash + 1);//"C:/moti/FindShoot/";
+	}
+	fName = fullFileName.substr(posOfLastSlash + 1);//"MVI_3";	
+	size_t posOfLastDot = fName.find_last_of(".");
+	if (posOfLastDot != string::npos)
+	{
+		extName = fName.substr(posOfLastDot); //".MOV";
+	}
+	fName = fName.substr(0, posOfLastDot);
+
+	ofstream fout;
+	fout.open(dirName + fName + ".csv");
+	//String fullFileName = dirName + fName + extName;
+	String mdFileName = dirName + fName + ".txt";
+
+	
+	String s1 = dirName + fName + "/HistOfShots.xml";
+	String s2 = dirName + fName + "/TimeOfShots.xml";
+	String s3 = dirName + fName + "/ShotsResults.csv";
+	AnalyzeShotsResult ana(s1, s2, mdFileName);
+	ana.Compute(s3);
+	return 0;
+}
+
+int FindShoots(char* vidName,unsigned char* imgBuffer,int imgHeight,int imgWidth, int isDebugMode)
 {
 	String fullFileName(vidName);
 	size_t posOfLastSlash = fullFileName.find_last_of("/\\");
@@ -342,6 +375,10 @@ int FindShoots(char* vidName)
 
 	bool isToCrop = false;
 	Rect cropRct;
+	cropRct.x = 0;
+	cropRct.y = 0;
+	cropRct.width = sz.width;
+	cropRct.height = sz.height;
 	if (sz.width > 800)
 	{
 		isToCrop = true;
