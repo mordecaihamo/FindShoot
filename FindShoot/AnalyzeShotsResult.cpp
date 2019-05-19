@@ -43,7 +43,7 @@ int AnalyzeShotsResult::LoadMetaData(String& mdFileName)
 	return 1;
 }
 
-int AnalyzeShotsResult::Compute(String& resultFileName)
+int AnalyzeShotsResult::Compute(String& resultFileName, int isDebugMode)
 {
 	int numOfShots = 0;
 	Size sz = mShotsHistogramMat.size();
@@ -53,15 +53,15 @@ int AnalyzeShotsResult::Compute(String& resultFileName)
 	Mat shotsFound(sz, CV_32FC1);
 	mShotsHistogramMat.convertTo(shotsFound, shotsFound.type());
 	threshold(shotsFound, shotsFound, 50, 255, THRESH_BINARY);
-	//minMaxLoc(mShotsHistogramMat, &mn16, &mx16);
-	//mShotsHistogramMat.convertTo(shot, shot.type(), 255.0 / max(1.0, mx16));
-	//cv::imshow("shotsHistogramMat", shot);
-	//minMaxLoc(mShotsFrameNumMat, &mn16, &mx16);
-	//mShotsFrameNumMat.convertTo(shot, shot.type(), 255.0 / mx16);
-	//cv::imshow("shotsFrameNumMat", shot);
-	//shotsFound.convertTo(shot, shot.type());
-	//cv::imshow("shotsFound", shot);
-	//cv::waitKey();
+	minMaxLoc(mShotsHistogramMat, &mn16, &mx16);
+	mShotsHistogramMat.convertTo(shot, shot.type(), 255.0 / max(1.0, mx16));
+	cv::imshow("shotsHistogramMat", shot);
+	minMaxLoc(mShotsFrameNumMat, &mn16, &mx16);
+	mShotsFrameNumMat.convertTo(shot, shot.type(), 255.0 / mx16);
+	cv::imshow("shotsFrameNumMat", shot);
+	shotsFound.convertTo(shot, shot.type());
+	cv::imshow("shotsFound", shot);
+	cv::waitKey();
 	vector<ShotData> sds;
 	numOfShots = LookForShots(mShotsHistogramMat, mShotsFrameNumMat, 50, sds);
 	sort(sds.begin(), sds.end(), CompareShotData);

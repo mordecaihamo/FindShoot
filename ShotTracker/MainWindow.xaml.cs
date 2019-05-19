@@ -43,17 +43,21 @@ namespace ShotTracker
             int bmWidth = 800;
             int bmHeight = bmWidth * 4 / 3;
             int isDebugMode = chkBoxIsDbg.IsChecked == false ? 0 : 1;
+            
             Bitmap managedBitmap = new Bitmap(bmWidth, bmHeight, PixelFormat.Format24bppRgb);
-            BitmapData bmpData = managedBitmap.LockBits(new Rectangle(0, 0, managedBitmap.Width, managedBitmap.Height), System.Drawing.Imaging.ImageLockMode.ReadWrite,
-                        System.Drawing.Imaging.PixelFormat.Format24bppRgb);
-            Task task1 = Task.Factory.StartNew(() => FindShoots(mVidFile, bmpData.Scan0, managedBitmap.Width, managedBitmap.Height, isDebugMode));
-            while (!task1.IsCompleted)
-            {             //int res = FindShoots(mVidFile, bmpData.Scan0, managedBitmap.Width, managedBitmap.Height);
-                Thread.Sleep(40);
-                Graphics g = Graphics.FromImage(managedBitmap);
+            //BitmapData bmpData = managedBitmap.LockBits(new Rectangle(0, 0, managedBitmap.Width, managedBitmap.Height), System.Drawing.Imaging.ImageLockMode.ReadWrite,
+            //            System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+            
+            Task task1 = Task.Factory.StartNew(() => FindShoots(mVidFile, managedBitmap.GetHbitmap(), managedBitmap.Width, managedBitmap.Height, isDebugMode));
+            //while (!task1.IsCompleted)
+            //{             //int res = FindShoots(mVidFile, bmpData.Scan0, managedBitmap.Width, managedBitmap.Height);
+            //    Thread.Sleep(40);
+            //   // Graphics g = Graphics.FromImage(managedBitmap);
                 
-            }
-            managedBitmap.UnlockBits(bmpData); //Remember to unlock!!!            
+                
+            //}
+            //task1.Wait();
+            //managedBitmap.UnlockBits(bmpData); //Remember to unlock!!!            
         }
 
         private void BtnBrowseVidFile_Click(object sender, RoutedEventArgs e)
