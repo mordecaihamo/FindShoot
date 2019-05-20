@@ -23,8 +23,10 @@ class AnalyzeShotsResult
 {
 	String mFileHisto;
 	String mFileTime;
-	Mat mShotsHistogramMat;// (sz.height, sz.width, CV_32SC1);
+	String mLastFramePath;
+	Mat mShotsHistogramMat;
 	Mat mShotsFrameNumMat;
+	Mat mLastFrame;
 	vector<ContourData> mCntrData;
 	ShootTargetMetaData mMetaData;
 	vector<ShotData> mShotsData;
@@ -33,6 +35,7 @@ public:
 	AnalyzeShotsResult();
 	AnalyzeShotsResult(String& histFileName, String& timeFileName);
 	AnalyzeShotsResult(String& histFileName, String& timeFileName, String& metadataFileName);
+	AnalyzeShotsResult(String& histFileName, String& timeFileName, String& metadataFileName, String& lastFramePath);
 	~AnalyzeShotsResult();
 
 	int Compute(String& resultFileName, int isDebugMode);

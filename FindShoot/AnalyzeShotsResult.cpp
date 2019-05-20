@@ -2,6 +2,7 @@
 #include "AnalyzeShotsResult.h"
 #include "ShotData.h"
 #include "MovmentUtils.h"
+#include <experimental/filesystem>
 
 
 bool CompareShotData(ShotData a, ShotData b)
@@ -17,13 +18,15 @@ AnalyzeShotsResult::AnalyzeShotsResult(String& histFileName, String& timeFileNam
 {
 	mFileHisto = histFileName;
 	mFileTime = timeFileName;
-
-	FileStorage fs1(mFileHisto, FileStorage::READ);
-	fs1["shotsHistogramMat"] >> mShotsHistogramMat;
-	fs1.release();
-	FileStorage fs2(mFileTime, FileStorage::READ);
-	fs2["shotsFrameNumMat"] >> mShotsFrameNumMat;
-	fs2.release();
+	if (std::experimental::filesystem::exists(mFileHisto) && std::experimental::filesystem::exists(mFileTime))
+	{
+		FileStorage fs1(mFileHisto, FileStorage::READ);
+		fs1["shotsHistogramMat"] >> mShotsHistogramMat;
+		fs1.release();
+		FileStorage fs2(mFileTime, FileStorage::READ);
+		fs2["shotsFrameNumMat"] >> mShotsFrameNumMat;
+		fs2.release();
+	}
 }
 
 AnalyzeShotsResult::AnalyzeShotsResult(String& histFileName, String& timeFileName, String& metadataFileName)
@@ -32,6 +35,15 @@ AnalyzeShotsResult::AnalyzeShotsResult(String& histFileName, String& timeFileNam
 	LoadMetaData(metadataFileName);
 }
 
+AnalyzeShotsResult::AnalyzeShotsResult(String& histFileName, String& timeFileName, String& metadataFileName, String& lastFramePath)
+	: AnalyzeShotsResult(histFileName, timeFileName, metadataFileName)
+{
+	mLastFramePath = lastFramePath;
+	if (std::experimental::filesystem::exists(mLastFramePath))
+	{
+		mLastFrame = imread(mLastFramePath);
+	}
+}
 
 AnalyzeShotsResult::~AnalyzeShotsResult()
 {
@@ -47,6 +59,8 @@ int AnalyzeShotsResult::Compute(String& resultFileName, int isDebugMode)
 {
 	int numOfShots = 0;
 	Size sz = mShotsHistogramMat.size();
+	if (mShotsHistogramMat.empty() || mShotsFrameNumMat.empty())
+		return -1;
 
 	double mn16, mx16;
 	Mat shot(sz, CV_8UC1);
@@ -61,7 +75,13 @@ int AnalyzeShotsResult::Compute(String& resultFileName, int isDebugMode)
 	cv::imshow("shotsFrameNumMat", shot);
 	shotsFound.convertTo(shot, shot.type());
 	cv::imshow("shotsFound", shot);
-	cv::waitKey();
+	Mat frameWithMarks;
+	if (!mLastFrame.empty())
+	{
+		cv::imshow("LastFrame", mLastFrame);
+		mLastFrame.copyTo(frameWithMarks);
+	}
+
 	vector<ShotData> sds;
 	numOfShots = LookForShots(mShotsHistogramMat, mShotsFrameNumMat, 50, sds);
 	sort(sds.begin(), sds.end(), CompareShotData);
@@ -82,8 +102,13 @@ int AnalyzeShotsResult::Compute(String& resultFileName, int isDebugMode)
 				sds[i].mDisFromCorners[l] = AucDis(sds[i].mCgX, sds[i].mCgY, (float)mMetaData.mPoints[l].x, (float)mMetaData.mPoints[l].y);
 			}
 			sds[i].mDisFromCenter = AucDis(sds[i].mCgX, sds[i].mCgY, (float)mMetaData.mCenter.x, (float)mMetaData.mCenter.y);
+			if (!mLastFrame.empty())
+			{
+				circle(frameWithMarks, Point((int)sds[i].mCgX, (int)sds[i].mCgY), 3, Scalar(255, 128, 0),-1);
+			}
 		}
 	}
+
 	/*Write the results to csv a file*/
 	ofstream of(resultFileName, ios::out | ios::trunc );
 	if (of.is_open())
@@ -107,6 +132,12 @@ int AnalyzeShotsResult::Compute(String& resultFileName, int isDebugMode)
 		of.close();
 	}
 
+	if (!frameWithMarks.empty())
+	{
+		cv::imshow("MarksLastFrame", frameWithMarks);
+	}
+	cv::waitKey();
+	cv::destroyAllWindows();
 
 	return numOfShots;
 }
