@@ -81,7 +81,7 @@ int AnalyzeShotsResult::Compute(String& resultFileName, int isDebugMode)
 		cv::imshow("LastFrame", mLastFrame);
 		mLastFrame.copyTo(frameWithMarks);
 	}
-
+	//cv::waitKey();
 	vector<ShotData> sds;
 	numOfShots = LookForShots(mShotsHistogramMat, mShotsFrameNumMat, 50, sds);
 	sort(sds.begin(), sds.end(), CompareShotData);

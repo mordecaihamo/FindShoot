@@ -177,14 +177,14 @@ int Analyze(char* vidName, int isDebugMode)
 
 	ofstream fout;
 	fout.open(dirName + fName + ".csv");
-	String lastFramePath = dirName + "lastFrame.bmp";
+	String lastFramePath = dirName + fName + "/lastFrame.bmp";
 	String mdFileName = dirName + fName + ".txt";
 
 	
 	String s1 = dirName + fName + "/HistOfShots.xml";
 	String s2 = dirName + fName + "/TimeOfShots.xml";
 	String s3 = dirName + fName + "/ShotsResults.csv";
-	AnalyzeShotsResult ana(s1, s2, mdFileName);
+	AnalyzeShotsResult ana(s1, s2, mdFileName,lastFramePath);
 	ana.Compute(s3, isDebugMode);
 	return 0;
 }
@@ -621,8 +621,8 @@ int FindShoots(const char* vidName,HBITMAP imgBuffer,int imgHeight,int imgWidth,
 		if(isDebugMode)
 			cv::imshow("matAdptBeforeClean", matAdpt);
 		Canny(matAdpt, grad8Thr, 0, 255, 5, true);
-		Mat canMat;
-		Canny(smallFrame, canMat, thrOfGrad, 1.75 * thrOfGrad, 3, true);
+		//Mat canMat;
+		//Canny(smallFrame, canMat, thrOfGrad, 1.75 * thrOfGrad, 3, true);
 		//cv::imshow("gradThrBeforeClean", grad8Thr);
 		//threshold(smallFrame, matAdpt, thr, 255, THRESH_BINARY);
 		//Mat matDx, matDy;
