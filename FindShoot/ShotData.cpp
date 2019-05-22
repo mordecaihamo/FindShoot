@@ -73,6 +73,7 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 				hist.convertTo(dispHist, CV_8U, 255.0 / max(1.0, mx16));
 				rectangle(dispHist, Point(c, r), Point(min(sz.width-1,c + 10), min(sz.height - 1, r + 10)), Scalar(255.0));
 				cv::imshow("histBefore", dispHist);
+				//cv::waitKey();
 #endif
 				if (val - tolL < thresholdInHist)
 					tolL = 0;
@@ -147,6 +148,7 @@ int ShotData::Split(vector<ShotData>& sds)
 	int numOfBins = (int)(curMaxVal / binInterval);
 	vector <vector<pair<Point, float>>> histP(numOfBins);
 	int curBin = 0;
+	//compute the histogram of the values in the spot, if we will get a large bin than it is a shot
 	for (int l = 0; l < len; ++l)
 	{
 		if (curMaxVal - allP[l].second < binInterval)
@@ -183,9 +185,11 @@ int ShotData::Split(vector<ShotData>& sds)
 			}
 			int dx = mxx - mnx + 1;
 			int dy = mxy - mny + 1;
+			//compute the squre area
 			int s = dx * dy;
+			//compute the ratio between the num of pix to the area. Assuming that the shot is round the ratio should be high
 			float rat = (float)histP[n].size() / s;
-			if (rat > 0.5)
+			if (rat > 0.3)
 			{
 				ShotData sd;
 				sd.mLen = (int)histP[n].size();

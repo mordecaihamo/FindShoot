@@ -15,19 +15,19 @@ namespace ShotTracker
     public partial class MainWindow : Window
     {
 #if DEBUG
-        //extern "C" FINDSHOOTEXPORT int Analyze(char* vidName, int isDebugMode);
         [DllImport("FindShootd.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int FindShoots(string vidName, IntPtr imgBuffer, int imgWidth, int imgHeight, int isDebugMode);
-
-        [DllImport("FindShootd.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int Analyze(string vidName, int isDebugMode);
 #else
         [DllImport("FindShoot.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int FindShoots(string vidName, IntPtr imgBuf, int width, int height, int isDbgMode = 1);
-
-        [DllImport("FindShoot.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int Analyze(string vidName, int isDebugMode);
 #endif
+        public static extern int FindShoots(string vidName, int colorCh, IntPtr imgBuffer, int imgWidth, int imgHeight, int isDebugMode);
+
+#if DEBUG
+        [DllImport("FindShootd.dll", CallingConvention = CallingConvention.Cdecl)]
+#else
+        [DllImport("FindShoot.dll", CallingConvention = CallingConvention.Cdecl)]
+#endif
+        public static extern int Analyze(string vidName, int isDebugMode);
+
         string mVidFile;
 
         public MainWindow()
@@ -37,18 +37,26 @@ namespace ShotTracker
 
         private void BtnPlay_Click(object sender, RoutedEventArgs e)
         {
-            mVidFile = "C:/moti/FindShoot/videos/MVI_3.MOV";
+            //mVidFile = "C:/moti/FindShoot/videos/MVI_3.MOV";
+            
             if (mVidFile == null)
                 return;
             int bmWidth = 800;
             int bmHeight = bmWidth * 4 / 3;
             int isDebugMode = chkBoxIsDbg.IsChecked == false ? 0 : 1;
-            
+            int processColor = -1;//Gray
+            if (radBtnRed.IsChecked == true)
+                processColor = 0;
+            if (radBtnGreen.IsChecked == true)
+                processColor = 1;
+            if (radBtnBlue.IsChecked == true)
+                processColor = 2;
+
             Bitmap managedBitmap = new Bitmap(bmWidth, bmHeight, PixelFormat.Format24bppRgb);
             //BitmapData bmpData = managedBitmap.LockBits(new Rectangle(0, 0, managedBitmap.Width, managedBitmap.Height), System.Drawing.Imaging.ImageLockMode.ReadWrite,
             //            System.Drawing.Imaging.PixelFormat.Format24bppRgb);
             
-            Task task1 = Task.Factory.StartNew(() => FindShoots(mVidFile, managedBitmap.GetHbitmap(), managedBitmap.Width, managedBitmap.Height, isDebugMode));
+            Task task1 = Task.Factory.StartNew(() => FindShoots(mVidFile, processColor, managedBitmap.GetHbitmap(), managedBitmap.Width, managedBitmap.Height, isDebugMode));
             //while (!task1.IsCompleted)
             //{             //int res = FindShoots(mVidFile, bmpData.Scan0, managedBitmap.Width, managedBitmap.Height);
             //    Thread.Sleep(40);
@@ -70,6 +78,7 @@ namespace ShotTracker
                     var file = fileDialog.FileName;
                     txtVidFile.Text = file;
                     txtVidFile.ToolTip = file;
+                    mVidFile = file;
                     break;
                 case System.Windows.Forms.DialogResult.Cancel:
                 default:

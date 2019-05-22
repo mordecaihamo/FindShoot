@@ -189,7 +189,7 @@ int Analyze(char* vidName, int isDebugMode)
 	return 0;
 }
 
-int FindShoots(const char* vidName,HBITMAP imgBuffer,int imgHeight,int imgWidth, int isDebugMode)
+int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHeight,int imgWidth, int isDebugMode)
 {
 	
 	String fullFileName(vidName);
@@ -308,6 +308,7 @@ int FindShoots(const char* vidName,HBITMAP imgBuffer,int imgHeight,int imgWidth,
 		imshow("EnterPositions", metaData.mOrgMat);
 		cv::setMouseCallback("EnterPositions", MarkRectDrag_callback, &metaData);
 		int k = cv::waitKey();
+		cv::destroyAllWindows();
 		float targetWidth = AucDis((float)metaData.mPoints[0].x, (float)metaData.mPoints[0].y, (float)metaData.mPoints[1].x, (float)metaData.mPoints[1].y);
 		//Make sure that the width of the target is 300 pix
 		rat = desiredTargetWidth / targetWidth;
@@ -322,8 +323,8 @@ int FindShoots(const char* vidName,HBITMAP imgBuffer,int imgHeight,int imgWidth,
 		metaData.mCenter.x = round(metaData.mCenter.x*ratSmall2Large);
 		metaData.mCenter.y = round(metaData.mCenter.y*ratSmall2Large);
 		drawPolyRect(frame, metaData.mPoints, Scalar(255, 0, 17), 1);
-		cv::imshow("TargetOnFrame", frame);
-		cv::waitKey();
+		//cv::imshow("TargetOnFrame", frame);
+		//cv::waitKey();
 		metaData.ToFile(mdFileName);
 	}
 	else
@@ -399,13 +400,18 @@ int FindShoots(const char* vidName,HBITMAP imgBuffer,int imgHeight,int imgWidth,
 	Mat map(cropSz.height, cropSz.width, CV_8UC1);
 	map.setTo(255);
 	drawPolyRect(map, metaData.mPoints, Scalar(0), -1);
-	int selectedCh = 1;
+	
 	int maxDiff = 0;
 	double mn, mx;
-	Mat bgr[3];
-	split(smallFrame, bgr);
-	bgr[selectedCh].copyTo(firstFrame);
-	//cvtColor(smallFrame, firstFrame, COLOR_BGR2GRAY);
+	
+	if (selectedCh >= 0)
+	{
+		Mat bgr[3];
+		split(smallFrame, bgr);
+		bgr[selectedCh].copyTo(firstFrame);
+	}
+	else
+		cvtColor(smallFrame, firstFrame, COLOR_BGR2GRAY);
 
 	BITMAP bmp;
 	GetObject(imgBuffer, sizeof(BITMAP), &bmp);
@@ -576,14 +582,21 @@ int FindShoots(const char* vidName,HBITMAP imgBuffer,int imgHeight,int imgWidth,
 			//if (cntFrameNum < 1475) continue;
 
 			resize(frame, frameRgb, sz);
+			smallFrame.copyTo(prevFrame);
 			if (isToCrop)
 				frameRgb = frameRgb(cropRct);
-			Mat bgr[3];
-			split(frame, bgr);
-			//bgr[selectedCh].copyTo(smallFrame);
-			//cvtColor(frame, frame, COLOR_BGR2GRAY);
-			smallFrame.copyTo(prevFrame);
-			resize(bgr[selectedCh], smallFrame, sz);
+			if (selectedCh >= 0)
+			{
+				Mat bgr[3];
+				split(frame, bgr);
+				resize(bgr[selectedCh], smallFrame, sz);
+			}
+			else
+			{
+				cvtColor(frame, frame, COLOR_BGR2GRAY);
+				resize(frame, smallFrame, sz);
+			}
+
 			if (isToCrop)
 				smallFrame = smallFrame(cropRct);
 			if (rot != 0)
@@ -959,9 +972,9 @@ int FindShoots(const char* vidName,HBITMAP imgBuffer,int imgHeight,int imgWidth,
 				break;
 		}
 		else if (!isFromFile)
-			waitKey(25);
-		else
-			break;
+			waitKey(10);
+		//else
+		//	break;
 	}
 
 	std::stringstream bufH, bufT;
@@ -1011,5 +1024,5 @@ int main()
 	String fullFileName = dirName + fName + extName;
 	HBITMAP imgBuffer;
 	imgBuffer = NULL;
-	return FindShoots(fullFileName.c_str(), imgBuffer, 1066, 800, 1);
+	return FindShoots(fullFileName.c_str(),1, imgBuffer, 1066, 800, 1);
 }

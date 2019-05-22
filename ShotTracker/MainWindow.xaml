@@ -29,5 +29,12 @@
                 </TextBox>
             </Grid>
         </GroupBox>
+        <StackPanel x:Name="panelRadBtn" HorizontalAlignment="Left" Height="85" Margin="460,146,0,0" VerticalAlignment="Top" Width="104" Background="#FFDAC0C0">
+            <Label x:Name="lblRadBtn" Content="Process Color:&#xA;" Height="23.92" FontWeight="Bold"/>
+            <RadioButton x:Name="radBtnGray" Content="Gray" IsChecked="True"/>
+            <RadioButton x:Name="radBtnRed" Content="Red" Foreground="#FFDA1010"/>
+            <RadioButton x:Name="radBtnGreen" Content="Green" Foreground="#FF48BD1B"/>
+            <RadioButton x:Name="radBtnBlue" Content="Blue" Foreground="#FF1919B8"/>
+        </StackPanel>
     </Grid>
 </Window>
