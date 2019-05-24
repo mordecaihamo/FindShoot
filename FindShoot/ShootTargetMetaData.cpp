@@ -11,7 +11,7 @@ bool IsItShot(ContourData& cd)
 	if (cd.mAvgOutRctColor - cd.mAvgInRctColor > 15 && 
 		cd.mAvgBorderColor - cd.mAvgInRctColor >= -0.5 && 
 		cd.mAvgInRctColor < 175 && cd.mRatioWh > 0.25 && 
-		cd.mShRct.width < 25 && 
+		cd.mShRct.width < 30 && 
 		cd.mShRct.height < 25 )
 	{
 		//if(	(cd.mAr > 10 && cd.mShRct.width < 20 && cd.mShRct.height < 20 && cd.mShRct.width > 2 && cd.mShRct.height > 2 && cd.mRatioWh > 0.54) /*||

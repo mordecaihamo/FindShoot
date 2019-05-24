@@ -44,12 +44,14 @@ void FloodfillIter(Mat& vals, Point q, int SEED_COLOR,int lowTol, int highTol, i
 }
 
 //#define _DISPLAY
-int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotData>& shots)
+int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotData>& shots, int isDebugMode)
 {
 	int numOfShots = 0;
-	Mat hist, histThr, mask;
+	Mat hist, histThr, mask, lowHistThr;
 	histMat.convertTo(hist, CV_32FC1);
 	threshold(hist, histThr, thresholdInHist, 255, THRESH_BINARY);
+	if(isDebugMode)
+		threshold(hist, lowHistThr, thresholdInHist>>2, 255, THRESH_BINARY);
 	//histThr.convertTo(histThr, CV_8UC1);
 	Size sz = histMat.size();
 	int cnt = 0;
@@ -66,25 +68,31 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 				Rect rct;
 				float val = hist.at<float>(r, c);
 				ShotData sd;
-#ifdef _DISPLAY
-				double mn16,  mx16;
-				minMaxLoc(hist, &mn16, &mx16);
-				Mat dispHist;
-				hist.convertTo(dispHist, CV_8U, 255.0 / max(1.0, mx16));
-				rectangle(dispHist, Point(c, r), Point(min(sz.width-1,c + 10), min(sz.height - 1, r + 10)), Scalar(255.0));
-				cv::imshow("histBefore", dispHist);
-				//cv::waitKey();
-#endif
+				double mn16, mx16;
+				if (isDebugMode)
+				{				
+					minMaxLoc(hist, &mn16, &mx16);
+					Mat dispHist;
+					hist.convertTo(dispHist, CV_8U, 255.0 / max(1.0, mx16));
+					rectangle(dispHist, Point(c, r), Point(min(sz.width - 1, c + 10), min(sz.height - 1, r + 10)), Scalar(255.0));
+					cv::imshow("histBefore", dispHist);
+					//cv::waitKey();
+				}
 				if (val - tolL < thresholdInHist)
 					tolL = 0;
 				FloodfillIter(histThr, Point(c, r), thrval, tolL, tolH, cnt, sd.mPoints, hist, 0);
-#ifdef _DISPLAY
-				hist.convertTo(dispHist, CV_8U, 255.0 / max(1.0, mx16));
-				cv::imshow("histAfter", dispHist);
-				histThr.convertTo(dispHist, CV_8U);
-				cv::imshow("histThr", dispHist);
-				cv::waitKey();
-#endif
+				if (isDebugMode)
+				{
+					Mat dispHist;
+					hist.convertTo(dispHist, CV_8U, 255.0 / max(1.0, mx16));
+					cv::imshow("histAfter", dispHist);
+					histThr.convertTo(dispHist, CV_8U);
+					cv::imshow("histThr", dispHist);
+					lowHistThr.convertTo(dispHist, CV_8U);
+					cv::imshow("lowHistThr", dispHist);
+					cv::waitKey();
+				}
+
 				vector<ShotData> sdsSplit;
 				sd.mIsFromSplit = false;
 				sd.mLen = (int)sd.mPoints.size();
@@ -189,7 +197,7 @@ int ShotData::Split(vector<ShotData>& sds)
 			int s = dx * dy;
 			//compute the ratio between the num of pix to the area. Assuming that the shot is round the ratio should be high
 			float rat = (float)histP[n].size() / s;
-			if (rat > 0.3)
+			if (rat > 0.3 || histP[n].size()>20)
 			{
 				ShotData sd;
 				sd.mLen = (int)histP[n].size();

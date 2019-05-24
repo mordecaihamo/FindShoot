@@ -17,6 +17,7 @@
 #include "MovmentUtils.h"
 #include "ContourData.h"
 #include "AnalyzeShotsResult.h"
+#include <experimental/filesystem>
 
 using namespace std;
 using namespace cv;
@@ -185,8 +186,8 @@ int Analyze(char* vidName, int isDebugMode)
 	String s2 = dirName + fName + "/TimeOfShots.xml";
 	String s3 = dirName + fName + "/ShotsResults.csv";
 	AnalyzeShotsResult ana(s1, s2, mdFileName,lastFramePath);
-	ana.Compute(s3, isDebugMode);
-	return 0;
+	int res = ana.Compute(s3, isDebugMode);
+	return res;
 }
 
 int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHeight,int imgWidth, int isDebugMode)
@@ -558,17 +559,16 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 	bool isToSave = false;
 	bool isInspectNms = false;
 	bool isFromFile = false && !isToSave;
-	//isInspectNms = true;
-	//isFromFile = true && !isToSave;
 	if (isToSave)
 	{
 		string folderCreateCommand = "mkdir \"" + dirName + fName + "\"";
 		system(folderCreateCommand.c_str());
 	}
 
-	int sumX = 0, sumY = 0;
+	int sumX = 0, sumY = 0, x = 0, y = 0;
 	while (1)
 	{
+		
 		if (!isFromFile)
 		{
 			shotsCand.resize(0);
@@ -582,7 +582,9 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 			//if (cntFrameNum < 1475) continue;
 
 			resize(frame, frameRgb, sz);
-			smallFrame.copyTo(prevFrame);
+			if(abs(x)<6 && abs(y)<6)
+				smallFrame.copyTo(prevFrame);
+
 			if (isToCrop)
 				frameRgb = frameRgb(cropRct);
 			if (selectedCh >= 0)
@@ -620,17 +622,17 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 		}
 		else
 		{
-			cntFrameNum = 1908; //940;//742;// //788;// 841;//  
+			cntFrameNum = 764; //940;//742;// //788;// 841;//  
 			std::stringstream buf;
 			buf << dirName << fName << "/" << cntFrameNum << ".bmp";
 			smallFrame = imread(buf.str());
 			cvtColor(smallFrame, smallFrame, COLOR_BGR2GRAY);
 		}
-		int x = 0, y = 0;
+		
 		FindMovment(firstFrame, smallFrame, x, y, rectInBound, look, false, false);
 		Point pntMov(x, y);
 
-		adaptiveThreshold(smallFrame, matAdpt, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, (((int)floor(1.1*sz.width)) | 1), 0);
+		adaptiveThreshold(smallFrame, matAdpt, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, (((int)floor(1.25*sz.width)) | 1), 0);
 		if(isDebugMode)
 			cv::imshow("matAdptBeforeClean", matAdpt);
 		Canny(matAdpt, grad8Thr, 0, 255, 5, true);
@@ -764,22 +766,22 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 				sprintf_s(buf, "FindShot: **** F=%d, Cntr=%d:%d, Area=%f,W=%d,H=%d,rat=%f, Pos(%d,%d),%d,%f\n",
 					cntFrameNum, idx, numOfContours, cd.mAr, cd.mShRct.width, cd.mShRct.height, cd.mRatioWh, cd.mCg.x, cd.mCg.y, cd.mLen, cd.mRatioFromAll);
 				OutputDebugStringA(buf);
-				//if (0 || cntFrameNum == -108)// && idx == 2)// && idxFirst == 7)
-				//{
-				//	shot.setTo(0);
-				//	cv::rectangle(shot, cdsFrame[idxOfLargeInTheArray].mShRct, 255);
-				//	cv::rectangle(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mShRct, 128);
-				//	polylines(shot, cdsFrame[idxOfLargeInTheArray].mContour, true, 200, 1, 8);
-				//	polylines(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mContour, true, 80, 1, 8);
-				//	polylines(shot, cd.mContour, true, 255, 1, 8);
-				//	circle(shot, cdsFrame[idxOfLargeInTheArray].mCg, 3, 255);
-				//	circle(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mCg, 3, 128);
-				//	cv::imshow("matAdpt", matAdpt);
-				//	cv::imshow("cntrIn", shot);
-				//	cv::imshow("Frame", smallFrame);
-				//	cv::imshow("grad8Thr", grad8Thr);
-				//	cv::waitKey();
-				//}
+				if (cntFrameNum == -764)// && idx == -10)// && idxFirst == 7)
+				{
+					shot.setTo(0);
+					cv::rectangle(shot, cdsFrame[idxOfLargeInTheArray].mShRct, 255);
+					cv::rectangle(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mShRct, 128);
+					polylines(shot, cdsFrame[idxOfLargeInTheArray].mContour, true, 200, 1, 8);
+					polylines(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mContour, true, 80, 1, 8);
+					polylines(shot, cd.mContour, true, 255, 1, 8);
+					circle(shot, cdsFrame[idxOfLargeInTheArray].mCg, 3, 255);
+					circle(shot, cntrDataFirst[idxOfLargeInTheFirstArray].mCg, 3, 128);
+					cv::imshow("matAdpt", matAdpt);
+					cv::imshow("cntrIn", shot);
+					cv::imshow("Frame", smallFrame);
+					cv::imshow("grad8Thr", grad8Thr);
+					cv::waitKey();
+				}
 				if (IsItShot(cd))
 				{
 					/*Need to go over the first contours compare its cg and MatchShape and see if this one is new, if yes add it to the list*/
@@ -893,6 +895,7 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 		std::cout << "Num of shots after NMS in frame " << cntFrameNum << " is ," << numOfShotsFound << endl;
 		fout << "Num of shots after NMS in frame " << cntFrameNum << " is ," << numOfShotsFound << endl;
 		shot.setTo(0);
+
 		for (int rc = 0; rc < numOfShotsFound; ++rc)
 		{
 			Rect rct(shotsCand[rc].mShRct);
@@ -901,20 +904,26 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 			//rct.x -= x;
 			//rct.y -= y;
 			//rectangle(frameRgb, rct, colors[rc], 2);
-			if (!isFromFile)
+			if (isDebugMode)
 			{
-				if (rc == numOfShotsFound - 1)
-					rectangle(frameRgb, rct, Scalar(0, 255, 0), 1);
+				if (!isFromFile)
+				{
+					if (rc == numOfShotsFound - 1)
+						rectangle(frameRgb, rct, Scalar(0, 255, 0), 1);
+					else
+						rectangle(frameRgb, rct, Scalar(255, 0, 0), 1);
+				}
 				else
-					rectangle(frameRgb, rct, Scalar(255, 0, 0), 1);
+				{
+					rectangle(smallFrame, rct, Scalar(10, 0, 0), 1);
+					//rectangle(matAdpt, rct, Scalar(128, 0, 0), 1);
+					//cv::imshow("Frame", smallFrame);
+					//cv::waitKey();
+				}
 			}
-			else
-			{
-				rectangle(smallFrame, rct, Scalar(10, 0, 0), 1);
-				//rectangle(matAdpt, rct, Scalar(128, 0, 0), 1);
-				//cv::imshow("Frame", smallFrame);
-				//cv::waitKey();
-			}
+			//std::stringstream buf;
+			//buf << dirName << fName << "\\"<<cntFrameNum<<"marks.bmp";
+			//imwrite(buf.str(), frameRgb);
 			//Copy the shot to the shots map, this map will be added to the totla map
 			rct = rct - pntMov;
 			Mat pMatThr = matAdpt(shotsCand[rc].mShRct);
@@ -972,14 +981,19 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 				break;
 		}
 		else if (!isFromFile)
-			waitKey(10);
+			waitKey(5);
 		//else
 		//	break;
 	}
 
 	std::stringstream bufH, bufT;
-	bufH << dirName << fName << "/HistOfShots.xml";
-	bufT << dirName << fName << "/TimeOfShots.xml";
+	bufH << dirName << fName;
+	if (!std::experimental::filesystem::exists(bufH.str()))
+	{
+		std::experimental::filesystem::create_directories(bufH.str());
+	}
+	bufH << "\\HistOfShots.xml";
+	bufT << dirName << fName << "\\TimeOfShots.xml";
 	cv::FileStorage fileHisto(bufH.str(), cv::FileStorage::WRITE);
 	cv::FileStorage fileTime(bufT.str(), cv::FileStorage::WRITE);
 	// Write to file!
@@ -988,8 +1002,8 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 	fileHisto.release();
 	fileTime.release();
 	std::stringstream buf;
-	buf << dirName << fName << "/lastFrame.bmp";
-	imwrite(buf.str(), smallFrame);
+	buf << dirName << fName << "\\lastFrame.bmp";
+	imwrite(buf.str(), prevFrame);
 
 	//destroyAllWindows();
 	if (!isFromFile && isDebugMode)

@@ -90,13 +90,14 @@ namespace ShotTracker
 
         private void BtnAnalyze_Click(object sender, RoutedEventArgs e)
         {
-            mVidFile = "C:/moti/FindShoot/videos/MVI_3.MOV";
+            //mVidFile = "C:/moti/FindShoot/videos/MVI_3.MOV";
             if (mVidFile == null)
                 return;
             int bmWidth = 800;
             int bmHeight = bmWidth * 4 / 3;
             int isDebugMode = chkBoxIsDbg.IsChecked == false ? 0 : 1;
-            Task task1 = Task.Factory.StartNew(() => Analyze(mVidFile, isDebugMode));
+            int res = 0;
+            Task task1 = Task.Factory.StartNew(() => res = Analyze(mVidFile, isDebugMode));
             task1.Wait();
         }
     }

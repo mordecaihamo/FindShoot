@@ -83,7 +83,7 @@ int AnalyzeShotsResult::Compute(String& resultFileName, int isDebugMode)
 	}
 	//cv::waitKey();
 	vector<ShotData> sds;
-	numOfShots = LookForShots(mShotsHistogramMat, mShotsFrameNumMat, 50, sds);
+	numOfShots = LookForShots(mShotsHistogramMat, mShotsFrameNumMat, 50, sds, isDebugMode);
 	sort(sds.begin(), sds.end(), CompareShotData);
 	/*Compute the distance from the metadata and cg*/
 	for (int i = 0; i < numOfShots; ++i)
