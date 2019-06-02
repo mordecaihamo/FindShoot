@@ -17,6 +17,7 @@ class ShootTargetMetaData
 public:
 	ShootTargetMetaData();
 	~ShootTargetMetaData();
+	ShootTargetMetaData (const ShootTargetMetaData& mdIn);
 	void DisplayTarget();
 	int ToFile(string filename);
 	int FromFile(string filename);

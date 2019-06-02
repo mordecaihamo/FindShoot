@@ -287,6 +287,24 @@ ShootTargetMetaData::~ShootTargetMetaData()
 {
 }
 
+ShootTargetMetaData::ShootTargetMetaData(const ShootTargetMetaData& mdIn)
+{
+	for (int i = 0; i < 4; i++)
+	{
+		mPoints[i].x = mdIn.mPoints[i].x;
+		mPoints[i].y = mdIn.mPoints[i].y;
+	}
+
+	mCenter.x = mdIn.mCenter.x;
+	mCenter.y = mdIn.mCenter.y;
+
+	mOrgMat = mdIn.mOrgMat;
+	mDrawMat = mdIn.mDrawMat;
+	mWindowName = mdIn.mWindowName;
+	mRectColor = mdIn.mRectColor;
+	mCenterColor = mdIn.mCenterColor;
+}
+
 void ShootTargetMetaData::DisplayTarget()
 {
 	mOrgMat.copyTo(mDrawMat);

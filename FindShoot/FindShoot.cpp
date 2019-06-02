@@ -19,22 +19,23 @@
 #include "AnalyzeShotsResult.h"
 #include <experimental/filesystem>
 #include <chrono>
+#include <windows.h>
+#include <strsafe.h>
 
 using namespace std;
 using namespace cv;
 
-bool _trace(const char *format, ...)
+
+void Trace(PCSTR pszFormat, ...)
 {
-	char buffer[1000];
+	CHAR szTrace[1024];
 
-	va_list argptr;
-	va_start(argptr, format);
-	sprintf_s(buffer, format, argptr);
-	va_end(argptr);
+	va_list args;
+	va_start(args, pszFormat);
+	(void)StringCchVPrintfA(szTrace, ARRAYSIZE(szTrace), pszFormat, args);
+	va_end(args);
 
-	OutputDebugStringA(buffer);
-
-	return true;
+	//OutputDebugStringA(szTrace);
 }
 
 void MarkRect_callback(int  event, int  x, int  y, int  flag, void *param)
@@ -301,9 +302,10 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 	ShootTargetMetaData metaData;
 	int desiredTargetWidth = 300;
 	int marginsTarget = 220;
+	int margins = 10;
 	if (stat(mdFileName.c_str(), &buffer) != 0)
 	{
-		int margins = 10;
+		
 		metaData.mPoints[0].x = margins;
 		metaData.mPoints[0].y = margins;
 		metaData.mPoints[1].x = sz.width - margins;
@@ -324,6 +326,7 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 		imshow("EnterPositions", metaData.mOrgMat);
 		cv::setMouseCallback("EnterPositions", MarkRectDrag_callback, &metaData);
 		int k = cv::waitKey();
+
 		cv::destroyAllWindows();
 		float targetWidth = AucDis((float)metaData.mPoints[0].x, (float)metaData.mPoints[0].y, (float)metaData.mPoints[1].x, (float)metaData.mPoints[1].y);
 		//Make sure that the width of the target is 300 pix
@@ -338,10 +341,25 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 		}
 		metaData.mCenter.x = round(metaData.mCenter.x*ratSmall2Large);
 		metaData.mCenter.y = round(metaData.mCenter.y*ratSmall2Large);
-		drawPolyRect(frame, metaData.mPoints, Scalar(255, 0, 17), 1);
+		//drawPolyRect(frame, metaData.mPoints, Scalar(255, 0, 17), 1);
 		//cv::imshow("TargetOnFrame", frame);
 		//cv::waitKey();
 		metaData.ToFile(mdFileName);
+
+		targetWidth = AucDis((float)metaData.mPoints[0].x, (float)metaData.mPoints[0].y, (float)metaData.mPoints[1].x, (float)metaData.mPoints[1].y);
+		//Make sure that the width of the target is 300 pix
+		rat = desiredTargetWidth / targetWidth;
+
+		sz.width = round(largeSz.width*rat);
+		sz.height = round(largeSz.height*rat);
+		//Return to work after saving
+		for (int i = 0; i < 4; ++i)
+		{
+			metaData.mPoints[i].x = round(metaData.mPoints[i].x*rat);
+			metaData.mPoints[i].y = round(metaData.mPoints[i].y*rat);
+		}
+		metaData.mCenter.x = round(metaData.mCenter.x*rat);
+		metaData.mCenter.y = round(metaData.mCenter.y*rat);
 	}
 	else
 	{
@@ -391,14 +409,14 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 	if (sz.width > 800)
 	{
 		isToCrop = true;
-		cropRct.x = max(0, metaData.mPoints[0].x - marginsTarget);
-		cropRct.width = metaData.mPoints[1].x - cropRct.x + marginsTarget;
+		cropRct.x = max(0, metaData.mPoints[0].x - margins);
+		cropRct.width = metaData.mPoints[1].x - cropRct.x + margins;
 		cropRct.y = 0;
 		cropRct.height = sz.height;
 		if (sz.height > 1000)
 		{
-			cropRct.y = max(0, metaData.mPoints[0].y - marginsTarget);
-			cropRct.height = metaData.mPoints[3].y - cropRct.y + marginsTarget;
+			cropRct.y = max(0, metaData.mPoints[0].y - margins);
+			cropRct.height = metaData.mPoints[3].y - cropRct.y + margins;
 		}
 		//Update the target positions
 		for (int i = 0; i < 4; ++i)
@@ -587,7 +605,7 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 	{
 		timing.resize(0);
 		timing.push_back(std::chrono::steady_clock::now());
-
+		Trace("****t01*****");
 		if (!isFromFile)
 		{
 			shotsCand.resize(0);
@@ -647,18 +665,19 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 			smallFrame = imread(buf.str());
 			cvtColor(smallFrame, smallFrame, COLOR_BGR2GRAY);
 		}
+		Trace("****t02*****");
 		timing.push_back(std::chrono::steady_clock::now());
 		bufTime<< "Time difference before  t1 " << (*(timing.end()-1)- *(timing.begin())).count()/ toMsec << std::endl;
 		FindMovment(firstFrame, smallFrame, x, y, rectInBound, look, false, false);
 		timing.push_back(std::chrono::steady_clock::now());
 		bufTime<< "Time difference before  t2 " << (*(timing.end() - 1) - *(timing.end()-2)).count() / toMsec << std::endl;
-
+		Trace("****t03*****");
 		Point pntMov(x, y);
 
-		adaptiveThreshold(smallFrame, matAdpt, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY_INV, (((int)floor(1.25*sz.width)) | 1), 0);
+		adaptiveThreshold(smallFrame, matAdpt, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, (((int)floor(1.25*sz.width)) | 1), 0);
 		timing.push_back(std::chrono::steady_clock::now());
 		bufTime<< "Time difference before  t3 " << (*(timing.end() - 1) - *(timing.end()-2)).count() / toMsec << std::endl;
-		
+		Trace("****t04*****");
 		Mat mapMove(cropSz.height, cropSz.width, CV_8UC1);
 		mapMove.setTo(255);
 		Point pointsRect[4];
@@ -991,7 +1010,7 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 //		}
 		timing.push_back(std::chrono::steady_clock::now());
 		bufTime<< "Time difference before  t11 " << (*(timing.end() - 1) - *(timing.end()-2)).count()/ toMsec << std::endl;
-
+		Trace("****t05*****");
 		//if (numOfShotsFound > 0)
 		{
 			Mat shot32;
@@ -1032,7 +1051,7 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 			cv::imshow("SHOTS", frameRgbDisplayed);
 			//cv::imshow("PrevFrame", prevFrame);
 		}
-		
+		Trace("****t06*****");
 		double mn16, mx16;
 		minMaxLoc(shotsHistogramMat, &mn16, &mx16);
 		shotsHistogramMat.convertTo(shot, shot.type(), 255.0 / max(1.0, mx16));
@@ -1051,8 +1070,8 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 		timing.push_back(std::chrono::steady_clock::now());
 		bufTime << "Time difference before  t12 " << (*(timing.end() - 1) - *(timing.end() - 2)).count() / toMsec << std::endl;
 		std::string str = bufTime.str();
-
-		OutputDebugStringA(str.c_str());
+		Trace("****t07*****");
+		//OutputDebugStringA(str.c_str());
 		// Press  ESC on keyboard to exit
 		if (0 && !isFromFile)//cntFrameNum > 680)//isToBreak)//
 		{
