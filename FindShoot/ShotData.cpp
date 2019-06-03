@@ -57,6 +57,7 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 	int cnt = 0;
 	int tolH = 150; //upper and lower diff to distitinguish between tight shots
 	int tolL = 150;
+	//Go over the pixels of the threshold hist mat, every pixel that is above thr is shot cand
 	for (int r = 0; r < sz.height; ++r)
 	{
 		for (int c = 0; c < sz.width; ++c)
@@ -80,6 +81,7 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 				}
 				if (val - tolL < thresholdInHist)
 					tolL = 0;
+				//Get the points that touching it
 				FloodfillIter(histThr, Point(c, r), thrval, tolL, tolH, cnt, sd.mPoints, hist, 0);
 				if (isDebugMode)
 				{
@@ -92,10 +94,11 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 					cv::imshow("lowHistThr", dispHist);
 					cv::waitKey();
 				}
-
+				//Split the blob to several blobs if shots touch each other
 				vector<ShotData> sdsSplit;
 				sd.mIsFromSplit = false;
 				sd.mLen = (int)sd.mPoints.size();
+				//Do the split
 				int splitsFound = sd.Split(sdsSplit);
 				if (splitsFound > 0)
 				{
@@ -121,9 +124,14 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 						sort(timeVals.begin(), timeVals.end());
 						int foundSz2 = foundSz >> 1;
 						sdsSplit[indSd].mValueInTime = timeVals[foundSz2];
-						shots.push_back(sdsSplit[indSd]);
-						++numOfShots;
-						cout << "Found " << numOfShots << " size " << foundSz << " value in hist " << val << " marked at frame # " << sd.mValueInTime << endl;
+						if (sdsSplit[indSd].mValueInTime > 75)//if this blob was after 3 sec. than add it, else it was at the starting frame
+						{
+							shots.push_back(sdsSplit[indSd]);
+							++numOfShots;
+							cout << "Found " << numOfShots << " size " << foundSz << " value in hist " << val << " marked at frame # " << sd.mValueInTime << endl;
+						}
+						else
+							cout<< "First frame marks with size"<<foundSz << " value in hist " << val << " marked at frame # " << sd.mValueInTime << endl;
 					}
 				}
 			}

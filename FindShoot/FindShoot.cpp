@@ -35,7 +35,7 @@ void Trace(PCSTR pszFormat, ...)
 	(void)StringCchVPrintfA(szTrace, ARRAYSIZE(szTrace), pszFormat, args);
 	va_end(args);
 
-	//OutputDebugStringA(szTrace);
+	OutputDebugStringA(szTrace);
 }
 
 void MarkRect_callback(int  event, int  x, int  y, int  flag, void *param)
@@ -603,8 +603,6 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 	int sumX = 0, sumY = 0, x = 0, y = 0;
 	while (1)
 	{
-		timing.resize(0);
-		timing.push_back(std::chrono::steady_clock::now());
 		Trace("****t01*****");
 		if (!isFromFile)
 		{
@@ -665,18 +663,12 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 			smallFrame = imread(buf.str());
 			cvtColor(smallFrame, smallFrame, COLOR_BGR2GRAY);
 		}
-		Trace("****t02*****");
-		timing.push_back(std::chrono::steady_clock::now());
-		bufTime<< "Time difference before  t1 " << (*(timing.end()-1)- *(timing.begin())).count()/ toMsec << std::endl;
+		Trace("****t02*****");		
 		FindMovment(firstFrame, smallFrame, x, y, rectInBound, look, false, false);
-		timing.push_back(std::chrono::steady_clock::now());
-		bufTime<< "Time difference before  t2 " << (*(timing.end() - 1) - *(timing.end()-2)).count() / toMsec << std::endl;
 		Trace("****t03*****");
 		Point pntMov(x, y);
 
-		adaptiveThreshold(smallFrame, matAdpt, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, (((int)floor(1.25*sz.width)) | 1), 0);
-		timing.push_back(std::chrono::steady_clock::now());
-		bufTime<< "Time difference before  t3 " << (*(timing.end() - 1) - *(timing.end()-2)).count() / toMsec << std::endl;
+		adaptiveThreshold(smallFrame, matAdpt, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, (((int)floor(2*sz.width)) | 1), 0);
 		Trace("****t04*****");
 		Mat mapMove(cropSz.height, cropSz.width, CV_8UC1);
 		mapMove.setTo(255);
@@ -1067,9 +1059,6 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 			cv::imshow("gradThr", grad8Thr);
 			cv::setMouseCallback("gradThr", mouse_callback, (void*)&grad8Thr);
 		}
-		timing.push_back(std::chrono::steady_clock::now());
-		bufTime << "Time difference before  t12 " << (*(timing.end() - 1) - *(timing.end() - 2)).count() / toMsec << std::endl;
-		std::string str = bufTime.str();
 		Trace("****t07*****");
 		//OutputDebugStringA(str.c_str());
 		// Press  ESC on keyboard to exit
