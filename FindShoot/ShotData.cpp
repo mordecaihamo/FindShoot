@@ -99,6 +99,9 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 				sd.mIsFromSplit = false;
 				sd.mLen = (int)sd.mPoints.size();
 				//Do the split
+				//Mat dispMat(sz, CV_8UC1);
+				//dispMat.setTo(0);
+				//int splitsFound = sd.Split(sdsSplit,&dispMat);
 				int splitsFound = sd.Split(sdsSplit);
 				if (splitsFound > 0)
 				{
@@ -150,7 +153,17 @@ ShotData::~ShotData()
 {
 }
 
-int ShotData::Split(vector<ShotData>& sds)
+void DrawBinPoints(vector<pair<Point, float>>& binPoints, Mat& displayMat, uchar color)
+{
+	int szBin = (int)binPoints.size();
+	
+	for (int i = 0; i < szBin; ++i)
+	{
+		displayMat.at<uchar>(binPoints[i].first.y, binPoints[i].first.x) = color;
+	}
+}
+
+int ShotData::Split(vector<ShotData>& sds, Mat* displayMat)
 {
 	int numOfShots = 0;
 	int len = (int)mPoints.size();
@@ -160,8 +173,10 @@ int ShotData::Split(vector<ShotData>& sds)
 	
 	sort(allP.begin(), allP.end(), comparePix);
 	float curMaxVal = allP[0].second;
-	int binInterval = 35;
+	int binInterval = 100;
 	int numOfBins = (int)(curMaxVal / binInterval);
+	if (numOfBins <= 1)
+		return numOfShots;
 	vector <vector<pair<Point, float>>> histP(numOfBins);
 	int curBin = 0;
 	//compute the histogram of the values in the spot, if we will get a large bin than it is a shot
@@ -173,23 +188,43 @@ int ShotData::Split(vector<ShotData>& sds)
 		}
 		else if (curBin < numOfBins)
 		{
-			++curBin;
+			if(curBin < numOfBins-1)
+				++curBin;
 			curMaxVal = allP[l].second;
 			histP[curBin].push_back(allP[l]);
 		}
 	}
 	//The first one (0) is the shot itself, so skip it.
-	for (int n = 1; n <= curBin; ++n)
+	float stdvMxDis = 2.0f;
+	uchar clr = 255;
+	for (int n = 0; n <= curBin; ++n)
 	{
+		if (displayMat)
+		{
+			DrawBinPoints(histP[n], *displayMat,clr);
+			clr -= 20;
+			if (clr < 0)
+				clr = 255;
+			imshow("disp", *displayMat);
+			waitKey();
+		}
+		if (n == 0)
+			continue;
 		if ((int)histP[n].size() >= 5)
 		{
 			//Possible new touching shot
 			//Check with the rect cover test
 			Rect rct;
 			int mnx = INT16_MAX, mxx = -1, mny = INT16_MAX, mxy = -1;
-			
-			for (int i = 0; i < (int)histP[n].size(); ++i)
+			float cgX = 0.0f, cgY = 0.0f, stdvX = 0.0f, stdvY = 0.0f;
+			float cgXnoOutLiers = 0.0f, cgYnoOutLiers = 0.0f;
+			int szBin = (int)histP[n].size();
+			int szAfterRemoveOutliers = szBin;
+			ShotData sd;
+			for (int i = 0; i < szBin; ++i)
 			{
+				cgX += histP[n][i].first.x;
+				cgY += histP[n][i].first.y;
 				if (histP[n][i].first.x < mnx)
 					mnx = histP[n][i].first.x;
 				if (histP[n][i].first.x > mxx)
@@ -199,17 +234,64 @@ int ShotData::Split(vector<ShotData>& sds)
 				if (histP[n][i].first.y > mxy)
 					mxy = histP[n][i].first.y;
 			}
+			cgX /= szBin;
+			cgY /= szBin;
+			for (int i = 0; i < szBin; ++i)
+			{
+				float dx = histP[n][i].first.x - cgX;
+				float dy = histP[n][i].first.y - cgY;
+				stdvX += dx * dx;
+				stdvY += dy * dy;
+			}
+			stdvX /= szBin;
+			stdvY /= szBin;
+			stdvX = sqrtf(stdvX);
+			stdvY = sqrtf(stdvY);
+
+			for (int i = 0; i < szBin; ++i)
+			{
+				float dx = abs(histP[n][i].first.x - cgX);
+				float dy = abs(histP[n][i].first.y - cgY);
+				if (dx > stdvMxDis*stdvX || dy > stdvMxDis*stdvY)
+				{
+					--szAfterRemoveOutliers;
+					continue;
+				}
+				cgXnoOutLiers += histP[n][i].first.x;
+				cgYnoOutLiers += histP[n][i].first.y;
+				sd.mPoints.push_back(histP[n][i]);
+				if (histP[n][i].first.x < mnx)
+					mnx = histP[n][i].first.x;
+				if (histP[n][i].first.x > mxx)
+					mxx = histP[n][i].first.x;
+				if (histP[n][i].first.y < mny)
+					mny = histP[n][i].first.y;
+				if (histP[n][i].first.y > mxy)
+					mxy = histP[n][i].first.y;
+			}
+			if (szAfterRemoveOutliers == 0)
+			{
+				continue;
+			}
+			cgXnoOutLiers /= szAfterRemoveOutliers;
+			cgYnoOutLiers /= szAfterRemoveOutliers;
 			int dx = mxx - mnx + 1;
 			int dy = mxy - mny + 1;
 			//compute the squre area
 			int s = dx * dy;
 			//compute the ratio between the num of pix to the area. Assuming that the shot is round the ratio should be high
 			float rat = (float)histP[n].size() / s;
-			if (rat > 0.3 || histP[n].size()>20)
-			{
-				ShotData sd;
-				sd.mLen = (int)histP[n].size();
-				sd.mPoints = histP[n];
+			if (rat > 0.3 || (rat>0.1 && histP[n].size()>20))
+			{		
+				if (displayMat)
+				{
+					displayMat->at<uchar>((int)cgYnoOutLiers, (int)cgXnoOutLiers) = 100;
+					imshow("disp", *displayMat);
+					waitKey();
+				}
+				sd.mCgX = cgXnoOutLiers;
+				sd.mCgY = cgYnoOutLiers;
+				sd.mLen = szAfterRemoveOutliers;
 				sd.mValueInHist = curMaxVal + n * binInterval;
 				sd.mIsFromSplit = true;
 				sds.push_back(sd);

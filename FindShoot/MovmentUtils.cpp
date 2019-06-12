@@ -136,3 +136,24 @@ Rect FindInboundRect(Rect rct, const Point* rectPoints)
 
 	return rctInBound;
 }
+
+void ThresholdByLightMap(Mat& inMat, Mat& outMat, Mat& lightMat, float percFromLight, Rect& inRect, Rect& lightRect)
+{
+	Mat img, l;
+	inMat.copyTo(img);
+	lightMat.copyTo(l);
+	Size sz = lightMat.size();
+	
+	Mat l1 = img(inRect);
+	Mat l2 = l(lightRect);
+	
+	l1 = l1 - l2 * percFromLight;
+	threshold(img, outMat, 10.0f, 255, THRESH_BINARY_INV);
+	//imshow("l1", l1);
+	//imshow("l2", l2);
+	imshow("I", inMat);
+	imshow("O", outMat);
+	imshow("L", l);
+	imshow("D", img);
+	//waitKey();
+}

@@ -25,7 +25,7 @@ public:
 
 	ShotData();
 	~ShotData();
-	int Split(vector<ShotData>& sds);
+	int Split(vector<ShotData>& sds, Mat* displayMat = NULL);
 };
 
 int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotData>& shots, int isDebugMode);

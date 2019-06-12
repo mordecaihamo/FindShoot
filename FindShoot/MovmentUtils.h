@@ -16,6 +16,8 @@ void FindMovment(Mat& a, Mat& b, int& x, int& y, Rect& rct, int lookDis, bool is
 
 Rect FindInboundRect(Rect rct, const Point* rectPoints);
 
+void ThresholdByLightMap(Mat& inMat, Mat& outMat, Mat& lightMat, float percFromLight, Rect& inRect, Rect& lightRect);
+
 template<class AUC>
 AUC AucDis(AUC ax, AUC ay, AUC bx, AUC by)
 {
