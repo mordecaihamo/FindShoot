@@ -24,10 +24,10 @@ public:
 	float mDisFromCenter;
 
 	ShotData();
-	ShotData(ShotData& sdIn);
+	ShotData(const ShotData& sdIn);
 	ShotData(vector<pair<Point, float>> pointsOfShot);
 	~ShotData();
-	ShotData* operator = (ShotData& sdIn);
+	ShotData& operator = (const ShotData& sdIn);
 	int Split(vector<ShotData>& sds, Mat* displayMat = NULL);
 	int Split(vector<ShotData>& sds,int shotMinLen, int shotminRad, Mat* displayMat);
 };

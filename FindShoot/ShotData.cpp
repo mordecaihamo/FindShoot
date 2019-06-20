@@ -199,7 +199,7 @@ ShotData::ShotData(vector<pair<Point, float>> pointsOfShot):ShotData()
 	mLen = (int)mPoints.size();
 }
 
-ShotData::ShotData(ShotData& sdIn)
+ShotData::ShotData(const ShotData& sdIn)
 {
 	mPoints = sdIn.mPoints;
 	mLen = sdIn.mLen;
@@ -216,7 +216,7 @@ ShotData::~ShotData()
 {
 }
 
-ShotData * ShotData::operator=(ShotData & sdIn)
+ShotData& ShotData::operator=(const ShotData & sdIn)
 {
 	mPoints = sdIn.mPoints;
 	mLen = sdIn.mLen;
@@ -227,7 +227,7 @@ ShotData * ShotData::operator=(ShotData & sdIn)
 	mCgY = sdIn.mCgY;
 	mDisFromCorners = sdIn.mDisFromCorners;
 	mDisFromCenter = sdIn.mDisFromCenter;
-	return this;
+	return *this;
 }
 
 void DrawBinPoints(vector<pair<Point, float>>& binPoints, Mat& displayMat, uchar color)
