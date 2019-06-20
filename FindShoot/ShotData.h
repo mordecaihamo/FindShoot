@@ -24,8 +24,12 @@ public:
 	float mDisFromCenter;
 
 	ShotData();
+	ShotData(ShotData& sdIn);
+	ShotData(vector<pair<Point, float>> pointsOfShot);
 	~ShotData();
+	ShotData* operator = (ShotData& sdIn);
 	int Split(vector<ShotData>& sds, Mat* displayMat = NULL);
+	int Split(vector<ShotData>& sds,int shotMinLen, int shotminRad, Mat* displayMat);
 };
 
 int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotData>& shots, int isDebugMode);

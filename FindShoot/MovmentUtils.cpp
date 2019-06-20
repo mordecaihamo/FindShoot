@@ -147,13 +147,16 @@ void ThresholdByLightMap(Mat& inMat, Mat& outMat, Mat& lightMat, float percFromL
 	Mat l1 = img(inRect);
 	Mat l2 = l(lightRect);
 	
-	l1 = l1 - l2 * percFromLight;
-	threshold(img, outMat, 10.0f, 255, THRESH_BINARY_INV);
+	Mat l3 = l1 - l2 * percFromLight;
+	img.setTo(0);
+	l3.copyTo(l1);
+	threshold(img, outMat, 1.0f, 255, THRESH_BINARY_INV);
+
 	//imshow("l1", l1);
 	//imshow("l2", l2);
-	imshow("I", inMat);
-	imshow("O", outMat);
-	imshow("L", l);
-	imshow("D", img);
+	//imshow("I", inMat);
+	//imshow("O", outMat);
+	//imshow("L", l);
+	//imshow("D", img);
 	//waitKey();
 }
