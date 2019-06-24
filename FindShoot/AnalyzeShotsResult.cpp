@@ -91,13 +91,6 @@ int AnalyzeShotsResult::Compute(String& resultFileName, int isDebugMode)
 	{
 		if (sds[i].mLen > 0)
 		{
-			for (int l = 0; l < sds[i].mLen; ++l)
-			{
-				sds[i].mCgX += sds[i].mPoints[l].first.x;
-				sds[i].mCgY += sds[i].mPoints[l].first.y;
-			}
-			sds[i].mCgX /= sds[i].mLen;
-			sds[i].mCgY /= sds[i].mLen;
 			for (int l = 0; l < 4; ++l)
 			{
 				sds[i].mDisFromCorners[l] = AucDis(sds[i].mCgX, sds[i].mCgY, (float)mMetaData.mPoints[l].x, (float)mMetaData.mPoints[l].y);

@@ -113,10 +113,10 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 	}
 	numOfShots = (int)shots.size();
 	sort(shots.begin(), shots.end(), CompareSpotsBySize);
-	int percentile10 = (int)round(numOfShots*0.9f);
+	int percentile10 = (int)round(numOfShots*0.5f);
 	int shotMinSize = shots[percentile10].mLen;
 	int shotDiam = sqrt(shotMinSize);
-	int shotMaxSizeAllowed = (int)round(shotMinSize*2.5f);
+	int shotMaxSizeAllowed = (int)round(shotMinSize*2.0f);
 	//Go over the first 0.5 spots and check if they are too big and needs to go to a split process
 	for (int i = 0; i < numOfShots*0.5; ++i)
 	{
@@ -132,19 +132,10 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 		//Do the split
 		Mat dispMat(sz, CV_8UC1);
 		dispMat.setTo(0);
-		//int splitsFound = sd.Split(sdsSplit,&dispMat);
 		int splitsFound = sd.Split(sdsSplit, shotMinSize, shotDiam, &dispMat);
-		//int splitsFound = sd.Split(sdsSplit);
-		if (splitsFound > 0)
-		{
-			for (int indSd = 0; indSd < (int)sdsSplit.size(); ++indSd)
-			{
-				sd.mLen -= sdsSplit[indSd].mLen;
-			}
-		}
 		char val = 0;
 		sd.mValueInHist = val;
-		sdsSplit.push_back(sd);
+//		sdsSplit.push_back(sd);
 		uchar color = 255;
 		for (int indSd = 0; indSd < (int)sdsSplit.size(); ++indSd)
 		{
@@ -198,6 +189,20 @@ ShotData::ShotData(vector<pair<Point, float>> pointsOfShot):ShotData()
 {
 	mPoints = pointsOfShot;
 	mLen = (int)mPoints.size();
+	mCgX = mCgY = 0.0f;
+	if (mLen == 0)
+		return;
+	mValueInHist = 0;
+	for (int i = 0; i < mLen; ++i)
+	{
+		mCgX += mPoints[i].first.x;
+		mCgY += mPoints[i].first.y;
+		if (mPoints[i].second > mValueInHist)
+			mValueInHist = mPoints[i].second;
+	}
+
+	mCgX /= mLen;
+	mCgY /= mLen;
 }
 
 ShotData::ShotData(const ShotData& sdIn)
@@ -466,98 +471,5 @@ int ShotData::Split(vector<ShotData>& sds, int shotMinLen, int shotminDiam, Mat*
 	//*displayMat = (*displayMat) *(int)floor(255 / maxNumberOfShots);
 	//imshow("displayMat", *displayMat);
 	//waitKey();
-	//while(len>5)
-	//{
-	//	vector<int> isMarked(len, 0);
-	//	int markedCnt = 0;
-	//	int curBin = 0;
-
-	//	histP[curBin].push_back(allP[0]);
-	//	isMarked[0] = 1;
-	//	markedCnt++;
-	//	int xOfMax = histP[curBin][0].first.x;
-	//	int yOfMax = histP[curBin][0].first.y;
-
-	//	for (int l = 1; l < len; ++l)
-	//	{
-	//		int x = allP[l].first.x;
-	//		int y = allP[l].first.y;
-	//		displayMat->at<uchar>(allP[l].first) = 255;
-	//		if (abs(x - xOfMax) <= shotminDiam && abs(y - yOfMax) <= shotminDiam && isMarked[l] == 0)
-	//		{
-	//			displayMat->at<uchar>(allP[l].first) = (curBin + 1) * 10;
-	//			histP[curBin].push_back(allP[l]);
-	//			isMarked[l] = 1;	
-	//			markedCnt++;
-	//		}
-	//	}
-	//	{
-	//		imshow("displayMat", *displayMat);
-	//		waitKey();
-	//	}
-	//	
-	//	auto iterB = allP.begin();
-	//	for (int m = len-1; m >=0; --m)
-	//	{
-	//		if (isMarked[m] == 1)
-	//		{
-	//			allP.erase(iterB+m);
-	//		}
-	//	}
-	//	//Add the pixels that have no neighbors UDLR
-	//	len = (int)allP.size();
-	//	isMarked.resize(len, 0);
-	//	for (int l = len-1; l >=0; --l)
-	//	{
-	//		int x = allP[l].first.x;
-	//		int y = allP[l].first.y;
-	//		//p1x=plus 1 x, m1x=minus 1 x
-	//		uchar p1x=255, m1x=255, p1y=255, m1y=255;
-	//		int numOfVoidNgbrs = 0;
-	//		if (x - 1 >= 0)
-	//		{
-	//			m1x = displayMat->at<uchar>(y, x - 1);
-	//			if (m1x <= markedCnt * 10)
-	//				++numOfVoidNgbrs;
-	//		}
-	//		if (x + 1 < sz.width)
-	//		{
-	//			p1x = displayMat->at<uchar>(y, x + 1);
-	//			if (p1x <= markedCnt * 10)
-	//				++numOfVoidNgbrs;
-	//		}
-	//		if (y - 1 >= 0)
-	//		{
-	//			m1y = displayMat->at<uchar>(y - 1, x);
-	//			if (m1y <= markedCnt * 10)
-	//				++numOfVoidNgbrs;
-	//		}
-	//		if (y + 1 < sz.height)
-	//		{
-	//			p1y = displayMat->at<uchar>(y + 1, x);
-	//			if (p1y <= markedCnt * 10)
-	//				++numOfVoidNgbrs;
-	//		}
-	//		if (numOfVoidNgbrs > 2)
-	//		{
-	//			displayMat->at<uchar>(allP[l].first) = (curBin + 1) * 10;
-	//			histP[curBin].push_back(allP[l]);
-	//			allP.erase(allP.begin() + l);
-	//		}
-	//	}
-	//	{
-	//		imshow("displayMat", *displayMat);
-	//		waitKey();
-	//	}
-	//	len = (int)allP.size();
-	//	if (histP[curBin].size() < 5)//If we did not find new shot cand, stop the search
-	//		break;
-	//	sds.push_back(ShotData(histP[curBin]));
-	//	++numOfShots;
-	//	++curBin;
-	//	markedCnt++;
-	//}
-
-
 	return numOfShots;
 }
