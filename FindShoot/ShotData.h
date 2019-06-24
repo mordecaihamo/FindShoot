@@ -29,7 +29,7 @@ public:
 	~ShotData();
 	ShotData& operator = (const ShotData& sdIn);
 	int Split(vector<ShotData>& sds, Mat* displayMat = NULL);
-	int Split(vector<ShotData>& sds,int shotMinLen, int shotminRad, Mat* displayMat);
+	int Split(vector<ShotData>& sds,int shotMinLen, int shotminDiam, Mat* displayMat);
 };
 
 int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotData>& shots, int isDebugMode);

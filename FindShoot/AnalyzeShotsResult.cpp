@@ -86,6 +86,7 @@ int AnalyzeShotsResult::Compute(String& resultFileName, int isDebugMode)
 	numOfShots = LookForShots(mShotsHistogramMat, mShotsFrameNumMat, 50, sds, isDebugMode);
 	sort(sds.begin(), sds.end(), CompareShotData);
 	/*Compute the distance from the metadata and cg*/
+	uchar c1 = 255, c2 = 128, c3 = 0;
 	for (int i = 0; i < numOfShots; ++i)
 	{
 		if (sds[i].mLen > 0)
@@ -104,7 +105,10 @@ int AnalyzeShotsResult::Compute(String& resultFileName, int isDebugMode)
 			sds[i].mDisFromCenter = AucDis(sds[i].mCgX, sds[i].mCgY, (float)mMetaData.mCenter.x, (float)mMetaData.mCenter.y);
 			if (!mLastFrame.empty())
 			{
-				circle(frameWithMarks, Point((int)sds[i].mCgX, (int)sds[i].mCgY), 3, Scalar(255, 128, 0),-1);
+				circle(frameWithMarks, Point((int)sds[i].mCgX, (int)sds[i].mCgY), 3, Scalar(c1, c2, c3),-1);
+				c1 += 20;
+				c2 -= 20;
+				c3 += 40;
 			}
 		}
 	}

@@ -80,7 +80,6 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 				--cnt;
 				Rect rct;
 				float val = hist.at<float>(r, c);
-				ShotData sd;
 				double mn16, mx16;
 				if (isDebugMode)
 				{
@@ -94,7 +93,9 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 				if (val - tolL < thresholdInHist)
 					tolL = 0;
 				//Get the points that touching it
-				FloodfillIter(histThr, Point(c, r), thrval, tolL, tolH, cnt, sd.mPoints, hist, 0);
+				vector<pair<Point, float>> points;
+				FloodfillIter(histThr, Point(c, r), thrval, tolL, tolH, cnt, points, hist, 0);
+				ShotData sd(points);
 				if (isDebugMode)
 				{
 					Mat dispHist;
@@ -114,8 +115,8 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 	sort(shots.begin(), shots.end(), CompareSpotsBySize);
 	int percentile10 = (int)round(numOfShots*0.9f);
 	int shotMinSize = shots[percentile10].mLen;
-	int shotRad = sqrt(shotMinSize);
-	int shotMaxSizeAllowed = (int)round(shotMinSize*1.5f);
+	int shotDiam = sqrt(shotMinSize);
+	int shotMaxSizeAllowed = (int)round(shotMinSize*2.5f);
 	//Go over the first 0.5 spots and check if they are too big and needs to go to a split process
 	for (int i = 0; i < numOfShots*0.5; ++i)
 	{
@@ -125,14 +126,14 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 		}
 		//Split the blob to several blobs if shots touch each other
 		vector<ShotData> sdsSplit;
-		ShotData sd;// (shots[i]);
+		ShotData sd(shots[i]);
 		sd.mIsFromSplit = false;
-		sd.mLen = (int)sd.mPoints.size();
+		
 		//Do the split
 		Mat dispMat(sz, CV_8UC1);
 		dispMat.setTo(0);
 		//int splitsFound = sd.Split(sdsSplit,&dispMat);
-		int splitsFound = sd.Split(sdsSplit, shotMinSize, shotRad, &dispMat);
+		int splitsFound = sd.Split(sdsSplit, shotMinSize, shotDiam, &dispMat);
 		//int splitsFound = sd.Split(sdsSplit);
 		if (splitsFound > 0)
 		{
@@ -380,7 +381,7 @@ int ShotData::Split(vector<ShotData>& sds, Mat* displayMat)
 	return numOfShots;
 }
 
-int ShotData::Split(vector<ShotData>& sds, int shotMinLen, int shotminRad, Mat* displayMat)
+int ShotData::Split(vector<ShotData>& sds, int shotMinLen, int shotminDiam, Mat* displayMat)
 {
 	int numOfShots = 0;
 	int len = (int)mPoints.size();
@@ -388,86 +389,174 @@ int ShotData::Split(vector<ShotData>& sds, int shotMinLen, int shotminRad, Mat* 
 		return numOfShots;
 	Size sz = displayMat->size();
 	vector<pair<Point, float>> allP = mPoints;
+	
 	sort(allP.begin(), allP.end(), ComparePix);
 	float curMaxVal = allP[0].second;
-	int maxNumberOfShots = len / shotMinLen;
-	++maxNumberOfShots;
+	int maxNumberOfShots = min(10,max(2, (int)floor(len / (2 * shotMinLen))));
+	
 	vector <vector<pair<Point, float>>> histP(maxNumberOfShots);
-	while(len>5)
+	Mat samples(len, 3, CV_32F), labels, centers;
+	for (int i = 0; i < len; ++i)
 	{
-		vector<int> isMarked(len, 0);
-		int markedCnt = 0;
-		int curBin = 0;
-
-		histP[curBin].push_back(allP[0]);
-		isMarked[0] = 1;
-		markedCnt++;
-		int xOfMax = histP[curBin][0].first.x;
-		int yOfMax = histP[curBin][0].first.y;
-
-		for (int l = 1; l < len; ++l)
-		{
-			int x = allP[l].first.x;
-			int y = allP[l].first.y;
-			displayMat->at<uchar>(allP[l].first) = 255;
-			if (abs(x - xOfMax) <= shotminRad && abs(y - yOfMax) <= shotminRad && isMarked[l] == 0)
-			{
-				displayMat->at<uchar>(allP[l].first) = markedCnt*10;
-				histP[curBin].push_back(allP[l]);
-				isMarked[l] = 1;
-				markedCnt++;
-			}
-		}
-		auto iter = allP.end();
-		auto iterB = allP.begin();
-		for (int m = len; m >=0; --m, --iter)
-		{
-			if (isMarked[m] == 1 && iter >= iterB)
-			{
-				allP.erase(iter);
-			}
-		}
-		//Add the pixels that have no neighbors UDLR
-		len = (int)allP.size();
-		isMarked.resize(len, 0);
-		for (int l = len-1; l >=0; --l)
-		{
-			int x = allP[l].first.x;
-			int y = allP[l].first.y;
-			if (x - 1 >= 0)
-			{
-				uchar v = displayMat->at<uchar>(y, x - 1);
-				if (v == 255)
-					continue;
-			}
-			if (x + 1 < sz.width)
-			{
-				uchar v = displayMat->at<uchar>(y, x + 1);
-				if (v == 255)
-					continue;
-			}
-			if (y - 1 >= 0)
-			{
-				uchar v = displayMat->at<uchar>(y - 1, x);
-				if (v == 255)
-					continue;
-			}
-			if (y + 1 < sz.height)
-			{
-				uchar v = displayMat->at<uchar>(y + 1, x);
-				if (v == 255)
-					continue;
-			}
-			histP[curBin].push_back(allP[l]);
-			allP.erase(allP.begin() + l);
-		}
-		len = (int)allP.size();
-		if (histP[curBin].size() < 5)//If we did not find new shot cand, stop the search
-			break;
-		sds.push_back(ShotData(histP[curBin]));
-		++numOfShots;
-		++curBin;
+		samples.at<float>(i, 0) = allP[i].first.x * 255;
+		samples.at<float>(i, 1) = allP[i].first.y * 255;
+		samples.at<float>(i, 2) = allP[i].second;
 	}
+	int attempts = 3;
+	TermCriteria tc;// = TermCriteria(TermCriteria::CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 10000, 0.0001);
+	tc.type = TermCriteria::Type::EPS | TermCriteria::Type::MAX_ITER;
+	tc.maxCount = 10000;
+	tc.epsilon = 0.001;
+	kmeans(samples, maxNumberOfShots, labels,tc, attempts, KMEANS_PP_CENTERS, centers);
+	vector<float> lblVec;
+	for (int i = 0; i < len; ++i)
+	{
+		int lbl = labels.at<int>(i, 0) + 1;
+		displayMat->at<uchar>(allP[i].first) = lbl;// *(int)floor(255 / maxNumberOfShots);
+		lblVec.push_back(lbl);
+	}
+
+	for (int l = 0; l < len; ++l)
+	{
+		int x = allP[l].first.x;
+		int y = allP[l].first.y;
+		int lbl = lblVec[l];
+		//p1x=plus 1 x, m1x=minus 1 x
+		uchar p1x=255, m1x=255, p1y=255, m1y=255;
+		int numOfVoidNgbrs = 0;
+		if (x - 1 >= 0)
+		{
+			m1x = displayMat->at<uchar>(y, x - 1);
+			if (m1x == lbl)
+				++numOfVoidNgbrs;
+		}
+		if (x + 1 < sz.width)
+		{
+			p1x = displayMat->at<uchar>(y, x + 1);
+			if (p1x == lbl)
+				++numOfVoidNgbrs;
+		}
+		if (y - 1 >= 0)
+		{
+			m1y = displayMat->at<uchar>(y - 1, x);
+			if (m1y == lbl)
+				++numOfVoidNgbrs;
+		}
+		if (y + 1 < sz.height)
+		{
+			p1y = displayMat->at<uchar>(y + 1, x);
+			if (p1y == lbl)
+				++numOfVoidNgbrs;
+		}
+		if (numOfVoidNgbrs > 1)
+		{
+			//displayMat->at<uchar>(allP[l].first) = (curBin + 1) * 10;
+			histP[lbl-1].push_back(allP[l]);
+		}
+	}
+
+	for (int i = 0; i < maxNumberOfShots; ++i)
+	{
+		if ((int)histP[i].size() > shotMinLen)
+		{
+			sds.push_back(ShotData(histP[i]));
+			++numOfShots;
+		}
+	}
+	//*displayMat = (*displayMat) *(int)floor(255 / maxNumberOfShots);
+	//imshow("displayMat", *displayMat);
+	//waitKey();
+	//while(len>5)
+	//{
+	//	vector<int> isMarked(len, 0);
+	//	int markedCnt = 0;
+	//	int curBin = 0;
+
+	//	histP[curBin].push_back(allP[0]);
+	//	isMarked[0] = 1;
+	//	markedCnt++;
+	//	int xOfMax = histP[curBin][0].first.x;
+	//	int yOfMax = histP[curBin][0].first.y;
+
+	//	for (int l = 1; l < len; ++l)
+	//	{
+	//		int x = allP[l].first.x;
+	//		int y = allP[l].first.y;
+	//		displayMat->at<uchar>(allP[l].first) = 255;
+	//		if (abs(x - xOfMax) <= shotminDiam && abs(y - yOfMax) <= shotminDiam && isMarked[l] == 0)
+	//		{
+	//			displayMat->at<uchar>(allP[l].first) = (curBin + 1) * 10;
+	//			histP[curBin].push_back(allP[l]);
+	//			isMarked[l] = 1;	
+	//			markedCnt++;
+	//		}
+	//	}
+	//	{
+	//		imshow("displayMat", *displayMat);
+	//		waitKey();
+	//	}
+	//	
+	//	auto iterB = allP.begin();
+	//	for (int m = len-1; m >=0; --m)
+	//	{
+	//		if (isMarked[m] == 1)
+	//		{
+	//			allP.erase(iterB+m);
+	//		}
+	//	}
+	//	//Add the pixels that have no neighbors UDLR
+	//	len = (int)allP.size();
+	//	isMarked.resize(len, 0);
+	//	for (int l = len-1; l >=0; --l)
+	//	{
+	//		int x = allP[l].first.x;
+	//		int y = allP[l].first.y;
+	//		//p1x=plus 1 x, m1x=minus 1 x
+	//		uchar p1x=255, m1x=255, p1y=255, m1y=255;
+	//		int numOfVoidNgbrs = 0;
+	//		if (x - 1 >= 0)
+	//		{
+	//			m1x = displayMat->at<uchar>(y, x - 1);
+	//			if (m1x <= markedCnt * 10)
+	//				++numOfVoidNgbrs;
+	//		}
+	//		if (x + 1 < sz.width)
+	//		{
+	//			p1x = displayMat->at<uchar>(y, x + 1);
+	//			if (p1x <= markedCnt * 10)
+	//				++numOfVoidNgbrs;
+	//		}
+	//		if (y - 1 >= 0)
+	//		{
+	//			m1y = displayMat->at<uchar>(y - 1, x);
+	//			if (m1y <= markedCnt * 10)
+	//				++numOfVoidNgbrs;
+	//		}
+	//		if (y + 1 < sz.height)
+	//		{
+	//			p1y = displayMat->at<uchar>(y + 1, x);
+	//			if (p1y <= markedCnt * 10)
+	//				++numOfVoidNgbrs;
+	//		}
+	//		if (numOfVoidNgbrs > 2)
+	//		{
+	//			displayMat->at<uchar>(allP[l].first) = (curBin + 1) * 10;
+	//			histP[curBin].push_back(allP[l]);
+	//			allP.erase(allP.begin() + l);
+	//		}
+	//	}
+	//	{
+	//		imshow("displayMat", *displayMat);
+	//		waitKey();
+	//	}
+	//	len = (int)allP.size();
+	//	if (histP[curBin].size() < 5)//If we did not find new shot cand, stop the search
+	//		break;
+	//	sds.push_back(ShotData(histP[curBin]));
+	//	++numOfShots;
+	//	++curBin;
+	//	markedCnt++;
+	//}
 
 
 	return numOfShots;
