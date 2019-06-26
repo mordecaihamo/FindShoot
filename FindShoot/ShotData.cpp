@@ -540,6 +540,7 @@ int ShotData::Split(vector<ShotData>& sds, int shotMinLen, int shotminRad, const
 	int minT = 50;
 	int curBin = 0;
 	float perOfV = 0.25f;
+	int r = shotminRad >> 2;
 	while (len > 5)
 	{
 		vector<int> isMarked(len, 0);
@@ -567,7 +568,7 @@ int ShotData::Split(vector<ShotData>& sds, int shotMinLen, int shotminRad, const
 
 			displayMat->at<uchar>(allP[l].first) = 255;
 			if (isMarked[l] == 0 && 
-				((abs(x - xOfMax) <= shotminRad && abs(y - yOfMax) <= shotminRad)||
+				((abs(x - xOfMax) <= r && abs(y - yOfMax) <= r)||
 				 t-tOfMax <= minT || vOfMax-v< vDiff))
 			{
 				displayMat->at<uchar>(allP[l].first) = marker;
