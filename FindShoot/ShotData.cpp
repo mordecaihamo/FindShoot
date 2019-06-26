@@ -2,9 +2,9 @@
 #include "ShotData.h"
 #include <iostream>
 
-bool ComparePix(pair<Point, float> a, pair<Point, float> b)
+bool ComparePix(pair < Point, pair<float, int>> a, pair < Point, pair<float, int>> b)
 {
-	return a.second > b.second;
+	return a.second.first > b.second.first;
 }
 
 bool CompareSpotsBySize(ShotData& a, ShotData& b)
@@ -533,13 +533,18 @@ int ShotData::Split(vector<ShotData>& sds, int shotMinLen, int shotminRad, const
 	{
 		displayMat->at<uchar>(allP[i].first) = (int)floor(255 * allP[i].second.first / curMaxVal);
 	}
+	
+	cv::imshow("displayMat", *displayMat);
+	cv::waitKey();
+	
 	int minT = 50;
+	int curBin = 0;
+	float perOfV = 0.25f;
 	while (len > 5)
 	{
 		vector<int> isMarked(len, 0);
 		int markedCnt = 0;
-		int curBin = 0;
-
+		displayMat->setTo(0);
 		histP[curBin].push_back(allP[0]);
 		isMarked[0] = 1;
 		markedCnt++;
@@ -547,7 +552,12 @@ int ShotData::Split(vector<ShotData>& sds, int shotMinLen, int shotminRad, const
 		int yOfMax = histP[curBin][0].first.y;
 		int tOfMax = histP[curBin][0].second.second;
 		float vOfMax = histP[curBin][0].second.first;
-		float vDiff = 0.25*vOfMax;
+		float vDiff = perOfV * vOfMax;
+
+		int mnx = sz.width, mxx = 0, mny = sz.height, mxy = 0;
+		int gcx = xOfMax, gcy = yOfMax;
+		uchar marker = (uchar)(255 - ((curBin + 1) * 50));
+		displayMat->at<uchar>(yOfMax, xOfMax) = marker;
 		for (int l = 1; l < len; ++l)
 		{
 			int x = allP[l].first.x;
@@ -560,19 +570,35 @@ int ShotData::Split(vector<ShotData>& sds, int shotMinLen, int shotminRad, const
 				((abs(x - xOfMax) <= shotminRad && abs(y - yOfMax) <= shotminRad)||
 				 t-tOfMax <= minT || vOfMax-v< vDiff))
 			{
-				displayMat->at<uchar>(allP[l].first) = markedCnt * 10;
+				displayMat->at<uchar>(allP[l].first) = marker;
 				histP[curBin].push_back(allP[l]);
 				isMarked[l] = 1;
 				markedCnt++;
+				gcx += x;
+				gcy += y;
+				if (x < mnx)
+					mnx = x;
+				if (x > mxx)
+					mxx = x;
+				if (y < mny)
+					mny = y;
+				if (y > mxy)
+					mxy = y;
 			}
 		}
-		auto iter = allP.end();
-		auto iterB = allP.begin();
-		for (int m = len; m >= 0; --m, --iter)
+		if (markedCnt > 0)
 		{
-			if (isMarked[m] == 1 && iter >= iterB)
+			gcx /= markedCnt;
+			gcy /= markedCnt;
+		}
+		cv::imshow("displayMat1", *displayMat);
+		cv::waitKey();
+		auto iterB = allP.begin();
+		for (int m = len - 1; m >= 0; --m)
+		{
+			if (isMarked[m] == 1)
 			{
-				allP.erase(iter);
+				allP.erase(iterB + m);
 			}
 		}
 		//Add the pixels that have no neighbors UDLR
@@ -581,38 +607,76 @@ int ShotData::Split(vector<ShotData>& sds, int shotMinLen, int shotminRad, const
 		{
 			int x = allP[l].first.x;
 			int y = allP[l].first.y;
+			int cnt = 0;
+			bool isL = false, isR = false, isU = false, isD = false;
 			if (x - 1 >= 0)
 			{
 				uchar v = displayMat->at<uchar>(y, x - 1);
 				if (v == 255)
-					continue;
+				{
+					isL = true;
+					++cnt;
+				}
 			}
 			if (x + 1 < sz.width)
 			{
 				uchar v = displayMat->at<uchar>(y, x + 1);
 				if (v == 255)
-					continue;
+				{
+					isR = true;
+					++cnt;
+				}
 			}
 			if (y - 1 >= 0)
 			{
 				uchar v = displayMat->at<uchar>(y - 1, x);
 				if (v == 255)
-					continue;
+				{
+					isU = true;
+					++cnt;
+				}
 			}
 			if (y + 1 < sz.height)
 			{
 				uchar v = displayMat->at<uchar>(y + 1, x);
 				if (v == 255)
-					continue;
+				{
+					isD = true;
+					++cnt;
+				}
 			}
-			histP[curBin].push_back(allP[l]);
-			allP.erase(allP.begin() + l);
+			if (cnt < 2 || 
+				(cnt==2 && //or if it is a line
+				((isR && isL)^(isU && isD))))
+			{
+				histP[curBin].push_back(allP[l]);
+				allP.erase(allP.begin() + l);
+				displayMat->at<uchar>(y, x) = marker;
+			}
 		}
 		len = (int)allP.size();
-		if (histP[curBin].size() < 5)//If we did not find new shot cand, stop the search
+		float w = mxx - mnx;
+		float h = mxy - mny;
+		if (histP[curBin].size() < 5 || w == 0 || h == 0)//If we did not find new shot cand, stop the search
 			break;
-		sds.push_back(ShotData(histP[curBin]));
-		++numOfShots;
+
+		float rat = (int)histP[curBin].size()/ (w*h);
+		int midX = (mxx + mnx)>>1;
+		int midY = (mxy + mny)>>1;
+		uchar vMid = displayMat->at<uchar>(midY, midX);
+		uchar vGc = displayMat->at<uchar>(gcy, gcx);
+		///
+		displayMat->at<uchar>(midY, midX) = marker - 40;
+		displayMat->at<uchar>(gcy, gcx) = marker - 60;
+		cv::imshow("displayMat2", *displayMat);
+		cv::waitKey();
+		//cv::destroyAllWindows();
+		///
+		if (rat > 0.1 && vMid > 0 && vGc > 0 && vMid < 255 && vGc < 255)
+		{
+			sds.push_back(ShotData(histP[curBin]));
+			++numOfShots;
+		}
 		++curBin;
 	}
 
