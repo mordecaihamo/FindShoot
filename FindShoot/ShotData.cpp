@@ -116,7 +116,7 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 	int percentile10 = (int)round(numOfShots*0.5f);
 	int shotMinSize = shots[percentile10].mLen;
 	int shotDiam = sqrt(shotMinSize);
-	int shotMaxSizeAllowed = (int)round(shotMinSize*2.0f);
+	int shotMaxSizeAllowed = (int)round(shotMinSize*1.5f);
 	//Go over the first 0.5 spots and check if they are too big and needs to go to a split process
 	for (int i = 0; i < numOfShots*0.5; ++i)
 	{
@@ -526,7 +526,7 @@ int ShotData::Split(vector<ShotData>& sds, int shotMinLen, int shotminRad, const
 	vector<pair<Point, pair<float, int>>> allP = mPoints;
 	sort(allP.begin(), allP.end(), ComparePix);
 	float curMaxVal = allP[0].second.first;
-	int maxNumberOfShots = len / shotMinLen;
+	int maxNumberOfShots = (int)ceil(len / (float)shotMinLen);
 	++maxNumberOfShots;
 	vector <vector<pair<Point, pair<float, int>>>> histP(maxNumberOfShots);
 	for (int i = 0; i < len; ++i)
@@ -680,7 +680,5 @@ int ShotData::Split(vector<ShotData>& sds, int shotMinLen, int shotminRad, const
 		}
 		++curBin;
 	}
-
-
 	return numOfShots;
 }
