@@ -202,7 +202,11 @@ int Analyze(char* vidName, int isDebugMode)
 	String s2 = dirName + fName + "/TimeOfShots.xml";
 	String s3 = dirName + fName + "/ShotsResults.csv";
 	AnalyzeShotsResult ana(s1, s2, mdFileName,lastFramePath);
-	int res = ana.Compute(s3, isDebugMode);
+	int res = -1;
+	if (ana.GetWidth() > 0 && ana.GetHeight() > 0)
+	{
+		res = ana.Compute(s3, isDebugMode);
+	}
 	return res;
 }
 
@@ -289,7 +293,7 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 	}
 	//bitwise_not(firstFrameThrs, firstFrameThrs);
 	//bitwise_not(tempSumFrame, tempSumFrame);
-
+	resize(frame, smallFrame, sz, 0, 0);
 	Size largeSz = frame.size();
 	float ratSmall2Large = (float)largeSz.width / (float)sz.width;
 	float rat = 1.0f;

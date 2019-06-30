@@ -97,7 +97,11 @@ namespace ShotTracker
             int bmHeight = bmWidth * 4 / 3;
             int isDebugMode = chkBoxIsDbg.IsChecked == false ? 0 : 1;
             int res = 0;
-            Task task1 = Task.Factory.StartNew(() => res = Analyze(mVidFile, isDebugMode));
+            Task task1 = Task.Factory.StartNew(() => { res = Analyze(mVidFile, isDebugMode);
+                if (res == -1)
+                    MessageBox.Show("You first need to press the PLAY button which will create the data!");
+            });
+
             task1.Wait();
         }
     }

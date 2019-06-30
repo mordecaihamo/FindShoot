@@ -38,6 +38,8 @@ public:
 	AnalyzeShotsResult(String& histFileName, String& timeFileName, String& metadataFileName, String& lastFramePath);
 	~AnalyzeShotsResult();
 
+	int GetWidth()	{return mShotsHistogramMat.size().width; };
+	int GetHeight() { return mShotsHistogramMat.size().height; };
 	int Compute(String& resultFileName, int isDebugMode);
 	int LoadMetaData(String& mdFileName);
 };

@@ -116,9 +116,9 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 	int percentile10 = (int)round(numOfShots*0.5f);
 	int shotMinSize = shots[percentile10].mLen;
 	int shotDiam = sqrt(shotMinSize);
-	int shotMaxSizeAllowed = (int)round(shotMinSize*1.5f);
+	int shotMaxSizeAllowed = (int)round(shotMinSize*1.25f);
 	//Go over the first 0.5 spots and check if they are too big and needs to go to a split process
-	for (int i = 0; i < numOfShots*0.5; ++i)
+	for (int i = 0; i < numOfShots; ++i)
 	{
 		if (shots[i].mLen < shotMaxSizeAllowed)
 		{
@@ -533,10 +533,10 @@ int ShotData::Split(vector<ShotData>& sds, int shotMinLen, int shotminRad, const
 	{
 		displayMat->at<uchar>(allP[i].first) = (int)floor(255 * allP[i].second.first / curMaxVal);
 	}
-	
+#ifdef _DISP_SPLIT	
 	cv::imshow("displayMat", *displayMat);
 	cv::waitKey();
-	
+#endif	
 	int minT = 50;
 	int curBin = 0;
 	float perOfV = 0.25f;
@@ -592,8 +592,10 @@ int ShotData::Split(vector<ShotData>& sds, int shotMinLen, int shotminRad, const
 			gcx /= markedCnt;
 			gcy /= markedCnt;
 		}
+#ifdef _DISP_SPLIT
 		cv::imshow("displayMat1", *displayMat);
 		cv::waitKey();
+#endif
 		auto iterB = allP.begin();
 		for (int m = len - 1; m >= 0; --m)
 		{
@@ -669,8 +671,10 @@ int ShotData::Split(vector<ShotData>& sds, int shotMinLen, int shotminRad, const
 		///
 		displayMat->at<uchar>(midY, midX) = marker - 40;
 		displayMat->at<uchar>(gcy, gcx) = marker - 60;
+#ifdef _DISP_SPLIT
 		cv::imshow("displayMat2", *displayMat);
 		cv::waitKey();
+#endif
 		//cv::destroyAllWindows();
 		///
 		if (rat > 0.1 && vMid > 0 && vGc > 0 && vMid < 255 && vGc < 255)
