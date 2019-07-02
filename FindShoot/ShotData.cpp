@@ -117,8 +117,8 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 					cv::imshow("lowHistThr", dispHist);
 					cv::waitKey();
 				}
-				if (sd.mLen > 23)
-					shots.push_back(sd);
+				//if (sd.mLen > 23)
+				shots.push_back(sd);
 			}
 		}
 	}
