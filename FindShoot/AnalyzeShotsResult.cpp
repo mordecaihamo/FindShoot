@@ -45,6 +45,18 @@ AnalyzeShotsResult::AnalyzeShotsResult(String& histFileName, String& timeFileNam
 	}
 }
 
+AnalyzeShotsResult::AnalyzeShotsResult(String& histFileName, String& timeFileName, String& metadataFileName, String& lastFramePath, String& xvMovPath)
+	: AnalyzeShotsResult(histFileName, timeFileName, metadataFileName, lastFramePath)
+{
+	mXYmovePath = xvMovPath;
+	if (std::experimental::filesystem::exists(mXYmovePath))
+	{
+		ifstream inStream(mXYmovePath.c_str(), std::ifstream::in);
+		inStream >> mXmove >> mYmove;
+		inStream.close();
+	}
+}
+
 AnalyzeShotsResult::~AnalyzeShotsResult()
 {
 }
@@ -61,7 +73,7 @@ int AnalyzeShotsResult::Compute(String& resultFileName, int isDebugMode)
 	Size sz = mShotsHistogramMat.size();
 	if (mShotsHistogramMat.empty() || mShotsFrameNumMat.empty())
 		return -1;
-
+	cv::destroyAllWindows();
 	double mn16, mx16;
 	Mat shot(sz, CV_8UC1);
 	Mat shotsFound(sz, CV_32FC1);
@@ -98,7 +110,7 @@ int AnalyzeShotsResult::Compute(String& resultFileName, int isDebugMode)
 			sds[i].mDisFromCenter = AucDis(sds[i].mCgX, sds[i].mCgY, (float)mMetaData.mCenter.x, (float)mMetaData.mCenter.y);
 			if (!mLastFrame.empty())
 			{
-				circle(frameWithMarks, Point((int)sds[i].mCgX, (int)sds[i].mCgY), 3, Scalar(c1, c2, c3),-1);
+				circle(frameWithMarks, Point((int)sds[i].mCgX+mXmove, (int)sds[i].mCgY+mYmove), 3, Scalar(c1, c2, c3),-1);
 				c1 += 20;
 				c2 -= 20;
 				c3 += 40;

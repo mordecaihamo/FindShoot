@@ -201,7 +201,8 @@ int Analyze(char* vidName, int isDebugMode)
 	String s1 = dirName + fName + "/HistOfShots.xml";
 	String s2 = dirName + fName + "/TimeOfShots.xml";
 	String s3 = dirName + fName + "/ShotsResults.csv";
-	AnalyzeShotsResult ana(s1, s2, mdFileName,lastFramePath);
+	String s4 = dirName + fName + "/xyMove.csv";
+	AnalyzeShotsResult ana(s1, s2, mdFileName,lastFramePath,s4);
 	int res = -1;
 	if (ana.GetWidth() > 0 && ana.GetHeight() > 0)
 	{
@@ -504,6 +505,7 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 	}
 	
 	int x = 0, y = 0;
+	int xLastFrame = 0, yLastFrame = 0;
 	while (1)
 	{
 		Trace("****t01*****");
@@ -520,8 +522,12 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 			//if (cntFrameNum < 1475) continue;
 
 			resize(frame, frameRgb, sz);
-			if(abs(x)<6 && abs(y)<6)
+			if (abs(x) < 25 && abs(y) < 25)
+			{
 				smallFrame.copyTo(prevFrame);
+				xLastFrame = x;
+				yLastFrame = y;
+			}
 
 			if (isToCrop)
 				frameRgb = frameRgb(cropRct);
@@ -678,7 +684,7 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 		//	break;
 	}
 
-	std::stringstream bufH, bufT;
+	std::stringstream bufH, bufT, bufMov;
 	bufH << dirName << fName;
 	if (!std::experimental::filesystem::exists(bufH.str()))
 	{
@@ -686,13 +692,19 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 	}
 	bufH << "\\HistOfShots.xml";
 	bufT << dirName << fName << "\\TimeOfShots.xml";
+	bufMov << dirName << fName << "\\xyMove.csv";
 	cv::FileStorage fileHisto(bufH.str(), cv::FileStorage::WRITE);
 	cv::FileStorage fileTime(bufT.str(), cv::FileStorage::WRITE);
+	ofstream outStream(bufMov.str(), std::ofstream::out);
+	outStream << xLastFrame << " " << yLastFrame << endl;
+	outStream.close();
 	// Write to file!
 	fileHisto << "shotsHistogramMat" << shotsHistogramMat;
 	fileTime << "shotsFrameNumMat" << shotsFrameNumMat;
+	
 	fileHisto.release();
 	fileTime.release();
+	
 	std::stringstream buf;
 	buf << dirName << fName << "\\lastFrame.bmp";
 	imwrite(buf.str(), prevFrame);

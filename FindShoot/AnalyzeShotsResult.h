@@ -24,18 +24,22 @@ class AnalyzeShotsResult
 	String mFileHisto;
 	String mFileTime;
 	String mLastFramePath;
+	String mXYmovePath;
 	Mat mShotsHistogramMat;
 	Mat mShotsFrameNumMat;
 	Mat mLastFrame;
 	vector<ContourData> mCntrData;
 	ShootTargetMetaData mMetaData;
 	vector<ShotData> mShotsData;
+	int mXmove;
+	int mYmove;
 
 public:
 	AnalyzeShotsResult();
 	AnalyzeShotsResult(String& histFileName, String& timeFileName);
 	AnalyzeShotsResult(String& histFileName, String& timeFileName, String& metadataFileName);
 	AnalyzeShotsResult(String& histFileName, String& timeFileName, String& metadataFileName, String& lastFramePath);
+	AnalyzeShotsResult(String& histFileName, String& timeFileName, String& metadataFileName, String& lastFramePath, String& xvMovPath);
 	~AnalyzeShotsResult();
 
 	int GetWidth()	{return mShotsHistogramMat.size().width; };

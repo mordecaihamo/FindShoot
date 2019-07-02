@@ -56,6 +56,16 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 	histMat.convertTo(hist, CV_32FC1);
 	Size sz = histMat.size();
 	threshold(hist, histThr, thresholdInHist, 255, THRESH_BINARY);
+	//cv::imshow("histThr1", histThr);
+	Mat time, thrTime32, thrTime;
+	timeMat.convertTo(time, CV_32FC1);
+	//Find all pixels that were ON before frame 100
+	threshold(time, thrTime32, 100, 255, THRESH_BINARY_INV);
+	thrTime32.convertTo(thrTime, CV_8U);
+	histThr.setTo(0, thrTime);
+	//cv::imshow("timeThr", thrTime);
+	//cv::waitKey();
+
 	Mat dispShots;
 	if (isDebugMode)
 	{
@@ -107,7 +117,8 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 					cv::imshow("lowHistThr", dispHist);
 					cv::waitKey();
 				}
-				shots.push_back(sd);
+				if (sd.mLen > 23)
+					shots.push_back(sd);
 			}
 		}
 	}
@@ -120,7 +131,7 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 	//Go over the first 0.5 spots and check if they are too big and needs to go to a split process
 	for (int i = 0; i < numOfShots; ++i)
 	{
-		if (shots[i].mLen < shotMaxSizeAllowed)
+		if (shots[i].mLen < 20)
 		{
 			break;//Since they are sorted, all of the following will also be small
 		}
@@ -522,6 +533,8 @@ int ShotData::Split(vector<ShotData>& sds, int shotMinLen, int shotminRad, const
 	int len = (int)mPoints.size();
 	if (len < 5)
 		return numOfShots;
+	//sds.push_back(ShotData(mPoints));
+	//return 1;
 	Size sz = displayMat->size();
 	vector<pair<Point, pair<float, int>>> allP = mPoints;
 	sort(allP.begin(), allP.end(), ComparePix);
@@ -533,6 +546,7 @@ int ShotData::Split(vector<ShotData>& sds, int shotMinLen, int shotminRad, const
 	{
 		displayMat->at<uchar>(allP[i].first) = (int)floor(255 * allP[i].second.first / curMaxVal);
 	}
+//#define _DISP_SPLIT
 #ifdef _DISP_SPLIT	
 	cv::imshow("displayMat", *displayMat);
 	cv::waitKey();
@@ -541,7 +555,7 @@ int ShotData::Split(vector<ShotData>& sds, int shotMinLen, int shotminRad, const
 	int curBin = 0;
 	float perOfV = 0.25f;
 	int r = shotminRad >> 2;
-	while (len > 5)
+	while (len >= 20)
 	{
 		vector<int> isMarked(len, 0);
 		int markedCnt = 0;
@@ -685,4 +699,12 @@ int ShotData::Split(vector<ShotData>& sds, int shotMinLen, int shotminRad, const
 		++curBin;
 	}
 	return numOfShots;
+}
+
+bool ShotData::IsItShot()
+{
+	bool res = false;
+	int minLen = 23;
+	bool isMaxValuesShapeWide = true;
+	return res;
 }

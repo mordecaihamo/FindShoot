@@ -13,7 +13,7 @@ using namespace cv;
 class ShotData
 {
 public:	
-	vector<pair<Point, pair<float, int>>> mPoints;//x,y, val in hist, appeared in frame
+	vector<pair<Point, pair<float, int>>> mPoints;//((x,y), (val_in_hist, appeared_in_frame))
 	int mLen;
 	float mValueInHist;
 	float mValueInTime;
@@ -31,6 +31,7 @@ public:
 	ShotData& operator = (const ShotData& sdIn);
 	int Split(vector<ShotData>& sds, Mat* displayMat = NULL);
 	int Split(vector<ShotData>& sds,int shotMinLen, int shotminDiam,const Mat& timeMat, Mat* displayMat);
+	bool IsItShot();
 };
 
 int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotData>& shots, int isDebugMode);
