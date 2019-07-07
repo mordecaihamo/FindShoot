@@ -118,7 +118,14 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 					cv::waitKey();
 				}
 				//if (sd.mLen > 23)
-				shots.push_back(sd);
+				//int t = INT_MAX;
+				//for (int s = 0; s < sd.mLen; ++s)
+				//{
+				//	if (sd.mPoints[s].second.second < t)
+				//		t = sd.mPoints[s].second.second;
+				//}
+				//if (t > 4 * 25)
+					shots.push_back(sd);
 			}
 		}
 	}
@@ -163,7 +170,7 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 				sort(timeVals.begin(), timeVals.end());
 				int foundSz2 = foundSz >> 1;
 				sdsSplit[indSd].mValueInTime = timeVals[foundSz2];
-				if (sdsSplit[indSd].mValueInTime > 75)//if this blob was after 3 sec. than add it, else it was at the starting frame
+				if (sdsSplit[indSd].mValueInTime > 3*25)//if this blob was after 3 sec. than add it, else it was at the starting frame
 				{
 					if (indSd == 0)
 						shots[i] = sdsSplit[indSd];
