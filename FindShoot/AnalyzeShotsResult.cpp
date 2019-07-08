@@ -110,7 +110,7 @@ int AnalyzeShotsResult::Compute(String& resultFileName, int isDebugMode)
 			sds[i].mDisFromCenter = AucDis(sds[i].mCgX, sds[i].mCgY, (float)mMetaData.mCenter.x, (float)mMetaData.mCenter.y);
 			if (!mLastFrame.empty())
 			{
-				circle(frameWithMarks, Point((int)sds[i].mCgX-mXmove, (int)sds[i].mCgY-mYmove), 3, Scalar(c1, c2, c3),-1);
+				circle(frameWithMarks, Point((int)sds[i].mCgX+mXmove, (int)sds[i].mCgY+mYmove), 3, Scalar(c1, c2, c3),-1);
 				c1 += 20;
 				c2 -= 20;
 				c3 += 40;
