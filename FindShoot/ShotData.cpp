@@ -124,7 +124,7 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 					if (sd.mPoints[s].second.second < t)
 						t = sd.mPoints[s].second.second;
 				}
-				if (t > 4 * 25 && sd.mLen > 23)
+				if (t > 4 * 25 && sd.mLen > 10)
 					shots.push_back(sd);
 			}
 		}
