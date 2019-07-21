@@ -27,10 +27,12 @@ public:
 	ShotData(const ShotData& sdIn);
 	ShotData(vector<pair<Point, pair<float, int>>> pointsOfShot);
 	ShotData(vector<pair<Point, pair<float, int>>> pointsOfShot, const Mat& timeMat);
+	ShotData(vector<Point> points, const Mat& timeMat);
+	ShotData(vector<Point> points, const Mat& timeMat, const Mat& histMat);
 	~ShotData();
 	ShotData& operator = (const ShotData& sdIn);
-	int Split(vector<ShotData>& sds, Mat* displayMat = NULL);
-	int Split(vector<ShotData>& sds,int shotMinLen, int shotminDiam,const Mat& timeMat, Mat* displayMat);
+	int Split(vector<ShotData>& sds, const Mat& timeMat, Mat* displayMat = NULL);
+	int Split(vector<ShotData>& sds,int shotMinLen, int shotminDiam,const Mat& timeMat, int thresholdInHist, Mat* displayMat);
 	bool IsItShot();
 };
 

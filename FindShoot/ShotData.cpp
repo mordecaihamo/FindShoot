@@ -1,6 +1,9 @@
 #include "pch.h"
 #include "ShotData.h"
 #include <iostream>
+#include "ContourData.h"
+
+typedef  pair<Point, float> PointVal;
 
 bool ComparePix(pair < Point, pair<float, int>> a, pair < Point, pair<float, int>> b)
 {
@@ -44,6 +47,45 @@ void FloodfillIter(Mat& vals, Point q, int SEED_COLOR,int lowTol, int highTol, i
 			stack.push_back(Point(x - 1, y));
 			stack.push_back(Point(x, y + 1));
 			stack.push_back(Point(x, y - 1));
+		}
+	}
+}
+//Flood fill that compares to it's neighbers and not to the seed
+void FloodfillNeigh(Mat& vals, const Mat& time, int ariveTime, Point q, int SEED_COLOR, int lowTol, int highTol, int COLOR, vector<pair<Point, pair<float, int>>>& foundPix, Mat& mask, int COLOR_MASK)
+{
+	int h = vals.rows;
+	int w = vals.cols;
+
+	if (q.y < 0 || q.y > h - 1 || q.x < 0 || q.x > w - 1)
+		return;
+	foundPix.resize(0);
+
+	vector<pair<Point,float>> stack;
+	PointVal qf;
+	qf.first = q;
+	qf.second = vals.at<float>(q.y, q.x);
+	stack.push_back(qf);
+	while ((int)stack.size() > 0)
+	{
+		PointVal p = stack[(int)stack.size() - 1];
+		stack.pop_back();
+		int x = p.first.x;
+		int y = p.first.y;
+		if (y < 0 || y > h - 1 || x < 0 || x > w - 1)
+			continue;
+		float val = vals.at<float>(y, x);
+		int t = time.at<int>(y, x);
+		if ((val >= p.second - lowTol && val <= p.second + highTol) || (val > 0 && t-ariveTime<25 ))
+		{
+			float v = mask.at<float>(y, x);
+			foundPix.push_back(make_pair(p.first, make_pair(v, -1)));
+
+			vals.at<float>(y, x) = COLOR;
+			mask.at<float>(y, x) = COLOR_MASK;
+			stack.push_back(make_pair(Point(x + 1, y), val));
+			stack.push_back(make_pair(Point(x - 1, y), val));
+			stack.push_back(make_pair(Point(x, y + 1), val));
+			stack.push_back(make_pair(Point(x, y - 1), val));
 		}
 	}
 }
@@ -150,7 +192,8 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 		//Do the split
 		Mat dispMat(sz, CV_8UC1);
 		dispMat.setTo(0);
-		int splitsFound = sd.Split(sdsSplit, shotMinSize, shotDiam,timeMat, &dispMat);
+		//int splitsFound = sd.Split(sdsSplit, shotMinSize, shotDiam, timeMat, thresholdInHist, &dispMat);
+		int splitsFound = sd.Split(sdsSplit,timeMat , &dispMat);
 		char val = 0;
 		sd.mValueInHist = val;
 //		sdsSplit.push_back(sd);
@@ -245,6 +288,21 @@ ShotData::ShotData(vector<pair<Point, pair<float, int>>> pointsOfShot, const Mat
 	}
 }
 
+ShotData::ShotData(vector<Point> points, const Mat& timeMat, const Mat& histMat)
+{
+	mPoints.resize(points.size());
+	mLen = (int)mPoints.size();
+
+	for (int i = 0; i < mLen; ++i)
+	{
+		mPoints[i].first = points[i];
+		int t = timeMat.at<int>(mPoints[i].first.y, mPoints[i].first.x);
+		float h=histMat.at<float>(mPoints[i].first.y, mPoints[i].first.x);
+		mPoints[i].second.first = h;
+		mPoints[i].second.second = t;
+	}
+}
+
 ShotData::ShotData(const ShotData& sdIn)
 {
 	mPoints = sdIn.mPoints;
@@ -286,12 +344,14 @@ void DrawBinPoints(vector<pair<Point, pair<float, int>>>& binPoints, Mat& displa
 	}
 }
 
-int ShotData::Split(vector<ShotData>& sds, Mat* displayMat)
+int ShotData::Split(vector<ShotData>& sds, const Mat& timeMat, Mat* displayMat)
 {
 	int numOfShots = 0;
 	int len = (int)mPoints.size();
 	if (len < 5)
 		return numOfShots;
+
+	Size sz = timeMat.size();
 	vector<pair<Point, pair<float, int>>> allP = mPoints;
 	
 	sort(allP.begin(), allP.end(), ComparePix);
@@ -302,21 +362,71 @@ int ShotData::Split(vector<ShotData>& sds, Mat* displayMat)
 		return numOfShots;
 	vector <vector<pair<Point, pair<float, int>>>> histP(numOfBins);
 	int curBin = 0;
-	//compute the histogram of the values in the spot, if we will get a large bin than it is a shot
-	for (int l = 0; l < len; ++l)
+	Mat spotsMat(sz.height, sz.width, CV_32F);
+	spotsMat.setTo(0);
+
+	for (int i = 0; i < len; ++i)
 	{
-		if (curMaxVal - allP[l].second.first < binInterval)
-		{
-			histP[curBin].push_back(allP[l]);
-		}
-		else if (curBin < numOfBins)
-		{
-			if(curBin < numOfBins-1)
-				++curBin;
-			curMaxVal = allP[l].second.first;
-			histP[curBin].push_back(allP[l]);
-		}
+		displayMat->at<uchar>(allP[i].first) = (int)floor(255 * allP[i].second.first / curMaxVal);
+		spotsMat.at<float>(allP[i].first) = allP[i].second.first;
 	}
+
+	Mat mask;
+	Mat spotsMatPrev;
+	spotsMat.copyTo(mask);
+	vector<pair<Point, pair<float, int>>> points;
+	//compute the histogram of the values in the spot, if we will get a large bin than it is a shot
+	int diffAllowed = 1;
+	for (int l = 0; l < (int)allP.size(); ++l)
+	{
+		points.resize(0);
+		spotsMat.copyTo(spotsMatPrev);
+		FloodfillNeigh(spotsMat, timeMat, allP[0].second.second, allP[0].first, (int)allP[l].second.first, diffAllowed, diffAllowed, 0, points, mask, 255);
+		if (1)
+		{
+			Mat spotsMat8;
+			spotsMat.convertTo(spotsMat8, CV_8UC1);
+			circle(spotsMat8, allP[0].first, 3, Scalar(128));
+			cv::imshow("spotsMat", spotsMat8);
+			cv::imshow("displayMat", *displayMat);
+			cv::waitKey();
+		}
+		
+		int pSz = (int)points.size();
+		if (pSz > 6)
+		{
+			histP[curBin] = points;
+			if (curBin < numOfBins - 1)
+			{
+				//find points in allP, and clear them
+				for (int p = 0; p < (int)points.size(); ++p)
+				{
+					for (int a = (int)allP.size() - 1; a >= 0; --a)
+					{
+						if (points[p].first == allP[a].first)
+						{
+							allP.erase(allP.begin() + a);
+							break;
+						}
+					}
+
+				}
+				++curBin;
+			}
+			else if(curBin == numOfBins - 1)
+				break;
+		}
+		else if (pSz <= 6 && (int)allP.size() > 6 && diffAllowed > 1)
+		{
+			spotsMatPrev.copyTo(spotsMat);
+			++diffAllowed;
+		}
+		else
+			break;
+	}
+
+
+	/* CHECK the OUTPUT*/
 	//The first one (0) is the shot itself, so skip it.
 	float stdvMxDis = 2.0f;
 	uchar clr = 255;
@@ -534,7 +644,7 @@ int ShotData::Split(vector<ShotData>& sds, Mat* displayMat)
 //	return numOfShots;
 //}
 
-int ShotData::Split(vector<ShotData>& sds, int shotMinLen, int shotminRad, const Mat& timeMat, Mat* displayMat)
+int ShotData::Split(vector<ShotData>& sds, int shotMinLen, int shotminRad, const Mat& timeMat, int thresholdInHist, Mat* displayMat)
 {
 	int numOfShots = 0;
 	int len = (int)mPoints.size();
@@ -543,6 +653,8 @@ int ShotData::Split(vector<ShotData>& sds, int shotMinLen, int shotminRad, const
 	//sds.push_back(ShotData(mPoints));
 	//return 1;
 	Size sz = displayMat->size();
+	Mat spotsMat(sz.height, sz.width, CV_32F);
+	spotsMat.setTo(0);
 	vector<pair<Point, pair<float, int>>> allP = mPoints;
 	sort(allP.begin(), allP.end(), ComparePix);
 	float curMaxVal = allP[0].second.first;
@@ -552,159 +664,72 @@ int ShotData::Split(vector<ShotData>& sds, int shotMinLen, int shotminRad, const
 	for (int i = 0; i < len; ++i)
 	{
 		displayMat->at<uchar>(allP[i].first) = (int)floor(255 * allP[i].second.first / curMaxVal);
+		spotsMat.at<float>(allP[i].first) = allP[i].second.first;
 	}
-//#define _DISP_SPLIT
-#ifdef _DISP_SPLIT	
-	cv::imshow("displayMat", *displayMat);
-	cv::waitKey();
-#endif	
-	int minT = 50;
-	int curBin = 0;
-	float perOfV = 0.25f;
-	int r = shotminRad >> 2;
-	while (len >= 20)
+	Mat blobsMat;
+
+	vector<ContourData> cntrData;
+	vector<vector<Point> > contoursThr;
+	vector<Vec4i> hierarchyThr;
+	//Go from thr=max until number of contours starts to decrease. At this point the shots start to join.
+	//Go back one step and take the blobs to further analyse.
+	Mat spotsMat8;
+	Mat blobsMat8(sz.height, sz.width, CV_8UC1);
+	Mat blobsPrev;
+	spotsMat.convertTo(spotsMat8, CV_8UC1, 255 / curMaxVal);
+	int curMaxVal8 = 255;
+	int thresholdInHist8 = 255*thresholdInHist / (float)curMaxVal;
+	int numOfCurContours = 1;
+	int numOfContours = 0;
+	int prevArea = 0;
+	int curArea = 1;
+	for (int thr = curMaxVal8 -1; thr > thresholdInHist8; --thr)
 	{
-		vector<int> isMarked(len, 0);
-		int markedCnt = 0;
-		displayMat->setTo(0);
-		histP[curBin].push_back(allP[0]);
-		isMarked[0] = 1;
-		markedCnt++;
-		int xOfMax = histP[curBin][0].first.x;
-		int yOfMax = histP[curBin][0].first.y;
-		int tOfMax = histP[curBin][0].second.second;
-		float vOfMax = histP[curBin][0].second.first;
-		float vDiff = perOfV * vOfMax;
-
-		int mnx = sz.width, mxx = 0, mny = sz.height, mxy = 0;
-		int gcx = xOfMax, gcy = yOfMax;
-		uchar marker = (uchar)(255 - ((curBin + 1) * 50));
-		displayMat->at<uchar>(yOfMax, xOfMax) = marker;
-		for (int l = 1; l < len; ++l)
+		blobsMat8.copyTo(blobsPrev);
+		threshold(spotsMat8, blobsMat8, (double)thr, 255, THRESH_BINARY);
+		prevArea = curArea;
+		curArea = countNonZero(blobsMat8);
+		//blobsMat.convertTo(blobsMat8, CV_8UC1);
+		vector<vector<Point> > contours;
+		vector<Vec4i> hierarchyFirst;
+		cv::findContours(blobsMat8, contours, hierarchyFirst, RETR_CCOMP, CHAIN_APPROX_NONE);
+		int numOfCurContours = (int)contours.size();
+		if (thr < curMaxVal8 - 1 && (numOfCurContours > 1 || curArea>1.25*prevArea))
 		{
-			int x = allP[l].first.x;
-			int y = allP[l].first.y;
-			int t = allP[l].second.second;
-			float v = allP[l].second.first;
-
-			displayMat->at<uchar>(allP[l].first) = 255;
-			if (isMarked[l] == 0 && 
-				((abs(x - xOfMax) <= r && abs(y - yOfMax) <= r)||
-				 t-tOfMax <= minT || vOfMax-v< vDiff))
-			{
-				displayMat->at<uchar>(allP[l].first) = marker;
-				histP[curBin].push_back(allP[l]);
-				isMarked[l] = 1;
-				markedCnt++;
-				gcx += x;
-				gcy += y;
-				if (x < mnx)
-					mnx = x;
-				if (x > mxx)
-					mxx = x;
-				if (y < mny)
-					mny = y;
-				if (y > mxy)
-					mxy = y;
-			}
+			cv::imshow("spotsMat", spotsMat8);
+			cv::imshow("blobsMat", blobsMat8);
+			cv::imshow("blobsMatPrev", blobsPrev);
+			cv::waitKey();
 		}
-		if (markedCnt > 0)
+		if (numOfCurContours < numOfContours)
 		{
-			gcx /= markedCnt;
-			gcy /= markedCnt;
-		}
-#ifdef _DISP_SPLIT
-		cv::imshow("displayMat1", *displayMat);
-		cv::waitKey();
-#endif
-		auto iterB = allP.begin();
-		for (int m = len - 1; m >= 0; --m)
-		{
-			if (isMarked[m] == 1)
-			{
-				allP.erase(iterB + m);
-			}
-		}
-		//Add the pixels that have no neighbors UDLR
-		len = (int)allP.size();		
-		for (int l = len - 1; l >= 0; --l)
-		{
-			int x = allP[l].first.x;
-			int y = allP[l].first.y;
-			int cnt = 0;
-			bool isL = false, isR = false, isU = false, isD = false;
-			if (x - 1 >= 0)
-			{
-				uchar v = displayMat->at<uchar>(y, x - 1);
-				if (v == 255)
-				{
-					isL = true;
-					++cnt;
-				}
-			}
-			if (x + 1 < sz.width)
-			{
-				uchar v = displayMat->at<uchar>(y, x + 1);
-				if (v == 255)
-				{
-					isR = true;
-					++cnt;
-				}
-			}
-			if (y - 1 >= 0)
-			{
-				uchar v = displayMat->at<uchar>(y - 1, x);
-				if (v == 255)
-				{
-					isU = true;
-					++cnt;
-				}
-			}
-			if (y + 1 < sz.height)
-			{
-				uchar v = displayMat->at<uchar>(y + 1, x);
-				if (v == 255)
-				{
-					isD = true;
-					++cnt;
-				}
-			}
-			if (cnt < 2 || 
-				(cnt==2 && //or if it is a line
-				((isR && isL)^(isU && isD))))
-			{
-				histP[curBin].push_back(allP[l]);
-				allP.erase(allP.begin() + l);
-				displayMat->at<uchar>(y, x) = marker;
-			}
-		}
-		len = (int)allP.size();
-		float w = mxx - mnx;
-		float h = mxy - mny;
-		if (histP[curBin].size() < 5 || w == 0 || h == 0)//If we did not find new shot cand, stop the search
+			++thr;
+			threshold(spotsMat8, blobsMat8, (double)thr, 255, THRESH_BINARY);
+			//blobsMat.convertTo(blobsMat8, CV_8UC1);
+			cv::findContours(blobsMat8, contoursThr, hierarchyThr, RETR_CCOMP, CHAIN_APPROX_NONE);
+			numOfContours = (int)contours.size();
+			cv::imshow("spotsMat", spotsMat8);
+			cv::imshow("blobsMat", blobsMat8);
+			cv::waitKey();
 			break;
-
-		float rat = (int)histP[curBin].size()/ (w*h);
-		int midX = (mxx + mnx)>>1;
-		int midY = (mxy + mny)>>1;
-		uchar vMid = displayMat->at<uchar>(midY, midX);
-		uchar vGc = displayMat->at<uchar>(gcy, gcx);
-		///
-		displayMat->at<uchar>(midY, midX) = marker - 40;
-		displayMat->at<uchar>(gcy, gcx) = marker - 60;
-#ifdef _DISP_SPLIT
-		cv::imshow("displayMat2", *displayMat);
-		cv::waitKey();
-#endif
-		//cv::destroyAllWindows();
-		///
-		if (rat > 0.1 && vMid > 0 && vGc > 0 && vMid < 255 && vGc < 255)
-		{
-			sds.push_back(ShotData(histP[curBin]));
-			++numOfShots;
 		}
-		++curBin;
 	}
+	Mat maskMat(sz.height, sz.width, CV_8UC1);
+	blobsMat8.copyTo(maskMat);
+	vector< ContourData> cds(numOfContours);
+	for (int i = 0; i < numOfContours; ++i)
+	{
+		ContourData cd(contoursThr[i], sz);
+		cds.push_back(cd);
+		auto pt = cd.mContour[0];
+		vector<pair<Point, pair<float, int>>> points;
+		FloodfillIter(blobsMat8, pt, 255, 255, 255, 128, points, maskMat, 0);
+		vector<pair<Point, pair<float, int>>> pointsOfShot;
+		ShotData sd(points, timeMat);
+		sds.push_back(sd);
+		++numOfShots;
+	}
+
 	return numOfShots;
 }
 
