@@ -97,8 +97,15 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 	Mat hist, histThr, mask, lowHistThr;
 	histMat.convertTo(hist, CV_32FC1);
 	Size sz = histMat.size();
+	//while (thresholdInHist > 0)
+	//{
 	threshold(hist, histThr, thresholdInHist, 255, THRESH_BINARY);
-	//cv::imshow("histThr1", histThr);
+	//	histThr.convertTo(histThr, CV_8UC1);
+	//	cv::imshow("histThr1", histThr);
+	//	cv::waitKey();
+	//	--thresholdInHist;
+	//}
+	
 	Mat time, thrTime32, thrTime;
 	timeMat.convertTo(time, CV_32FC1);
 	//Find all pixels that were ON before frame 100
@@ -115,7 +122,7 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 		dispShots.setTo(0);
 		threshold(hist, lowHistThr, thresholdInHist >> 2, 255, THRESH_BINARY);
 	}
-	//histThr.convertTo(histThr, CV_8UC1);
+	
 	
 	
 	int cnt = 0;
@@ -194,6 +201,9 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 		dispMat.setTo(0);
 		//int splitsFound = sd.Split(sdsSplit, shotMinSize, shotDiam, timeMat, thresholdInHist, &dispMat);
 		int splitsFound = sd.Split(sdsSplit,timeMat , &dispMat);
+		if (splitsFound == 1)
+			continue;
+
 		char val = 0;
 		sd.mValueInHist = val;
 //		sdsSplit.push_back(sd);
@@ -382,7 +392,7 @@ int ShotData::Split(vector<ShotData>& sds, const Mat& timeMat, Mat* displayMat)
 		points.resize(0);
 		spotsMat.copyTo(spotsMatPrev);
 		FloodfillNeigh(spotsMat, timeMat, allP[0].second.second, allP[0].first, (int)allP[l].second.first, diffAllowed, diffAllowed, 0, points, mask, 255);
-		if (1)
+		if (0)
 		{
 			Mat spotsMat8;
 			spotsMat.convertTo(spotsMat8, CV_8UC1);
@@ -424,115 +434,14 @@ int ShotData::Split(vector<ShotData>& sds, const Mat& timeMat, Mat* displayMat)
 		else
 			break;
 	}
-
-
 	/* CHECK the OUTPUT*/
-	//The first one (0) is the shot itself, so skip it.
-	float stdvMxDis = 2.0f;
-	uchar clr = 255;
-	for (int n = 0; n <= curBin; ++n)
+	int numOfCands = curBin;
+	for (int s = 0; s < numOfCands; ++s)
 	{
-		if (displayMat)
-		{
-			DrawBinPoints(histP[n], *displayMat,clr);
-			clr -= 20;
-			if (clr < 0)
-				clr = 255;
-			imshow("disp", *displayMat);
-			waitKey();
-		}
-		if (n == 0)
-			continue;
-		if ((int)histP[n].size() >= 5)
-		{
-			//Possible new touching shot
-			//Check with the rect cover test
-			Rect rct;
-			int mnx = INT16_MAX, mxx = -1, mny = INT16_MAX, mxy = -1;
-			float cgX = 0.0f, cgY = 0.0f, stdvX = 0.0f, stdvY = 0.0f;
-			float cgXnoOutLiers = 0.0f, cgYnoOutLiers = 0.0f;
-			int szBin = (int)histP[n].size();
-			int szAfterRemoveOutliers = szBin;
-			ShotData sd;
-			for (int i = 0; i < szBin; ++i)
-			{
-				cgX += histP[n][i].first.x;
-				cgY += histP[n][i].first.y;
-				if (histP[n][i].first.x < mnx)
-					mnx = histP[n][i].first.x;
-				if (histP[n][i].first.x > mxx)
-					mxx = histP[n][i].first.x;
-				if (histP[n][i].first.y < mny)
-					mny = histP[n][i].first.y;
-				if (histP[n][i].first.y > mxy)
-					mxy = histP[n][i].first.y;
-			}
-			cgX /= szBin;
-			cgY /= szBin;
-			for (int i = 0; i < szBin; ++i)
-			{
-				float dx = histP[n][i].first.x - cgX;
-				float dy = histP[n][i].first.y - cgY;
-				stdvX += dx * dx;
-				stdvY += dy * dy;
-			}
-			stdvX /= szBin;
-			stdvY /= szBin;
-			stdvX = sqrtf(stdvX);
-			stdvY = sqrtf(stdvY);
-
-			for (int i = 0; i < szBin; ++i)
-			{
-				float dx = abs(histP[n][i].first.x - cgX);
-				float dy = abs(histP[n][i].first.y - cgY);
-				if (dx > stdvMxDis*stdvX || dy > stdvMxDis*stdvY)
-				{
-					--szAfterRemoveOutliers;
-					continue;
-				}
-				cgXnoOutLiers += histP[n][i].first.x;
-				cgYnoOutLiers += histP[n][i].first.y;
-				sd.mPoints.push_back(histP[n][i]);
-				if (histP[n][i].first.x < mnx)
-					mnx = histP[n][i].first.x;
-				if (histP[n][i].first.x > mxx)
-					mxx = histP[n][i].first.x;
-				if (histP[n][i].first.y < mny)
-					mny = histP[n][i].first.y;
-				if (histP[n][i].first.y > mxy)
-					mxy = histP[n][i].first.y;
-			}
-			if (szAfterRemoveOutliers == 0)
-			{
-				continue;
-			}
-			cgXnoOutLiers /= szAfterRemoveOutliers;
-			cgYnoOutLiers /= szAfterRemoveOutliers;
-			int dx = mxx - mnx + 1;
-			int dy = mxy - mny + 1;
-			//compute the squre area
-			int s = dx * dy;
-			//compute the ratio between the num of pix to the area. Assuming that the shot is round the ratio should be high
-			float rat = (float)histP[n].size() / s;
-			if (rat > 0.3 || (rat>0.1 && histP[n].size()>20))
-			{		
-				if (displayMat)
-				{
-					displayMat->at<uchar>((int)cgYnoOutLiers, (int)cgXnoOutLiers) = 100;
-					imshow("disp", *displayMat);
-					waitKey();
-				}
-				sd.mCgX = cgXnoOutLiers;
-				sd.mCgY = cgYnoOutLiers;
-				sd.mLen = szAfterRemoveOutliers;
-				sd.mValueInHist = curMaxVal + n * binInterval;
-				sd.mIsFromSplit = true;
-				sds.push_back(sd);
-				++numOfShots;
-			}
-		}
+		ShotData sd(histP[s]);
+		sds.push_back(sd);
 	}
-
+	numOfShots = (int)sds.size();
 	return numOfShots;
 }
 
