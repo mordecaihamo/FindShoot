@@ -73,13 +73,18 @@ int AnalyzeShotsResult::Compute(String& resultFileName, int isDebugMode)
 	Size sz = mShotsHistogramMat.size();
 	if (mShotsHistogramMat.empty() || mShotsFrameNumMat.empty())
 		return -1;
+	int minHistThr = 50;
 	cv::destroyAllWindows();
 	double mn16, mx16;
 	Mat shot(sz, CV_8UC1);
 	Mat shotsFound(sz, CV_32FC1);
-	mShotsHistogramMat.convertTo(shotsFound, shotsFound.type());
-	threshold(shotsFound, shotsFound, 50, 255, THRESH_BINARY);
 	minMaxLoc(mShotsHistogramMat, &mn16, &mx16);
+
+	mShotsHistogramMat.convertTo(shotsFound, shotsFound.type());
+	double mn16sc, mx16sc;
+	minMaxLoc(shotsFound, &mn16sc, &mx16sc);
+	threshold(shotsFound, shotsFound, minHistThr, 255, THRESH_BINARY);
+	minHistThr = mx16 * 80 / 255;
 	mShotsHistogramMat.convertTo(shot, shot.type(), 255.0 / max(1.0, mx16));
 	cv::imshow("shotsHistogramMat", shot);
 	minMaxLoc(mShotsFrameNumMat, &mn16, &mx16);
@@ -95,7 +100,7 @@ int AnalyzeShotsResult::Compute(String& resultFileName, int isDebugMode)
 	}
 	//cv::waitKey();
 	vector<ShotData> sds;
-	numOfShots = LookForShots(mShotsHistogramMat, mShotsFrameNumMat, 50, sds, isDebugMode);
+	numOfShots = LookForShots(mShotsHistogramMat, mShotsFrameNumMat, minHistThr, sds, isDebugMode);
 	sort(sds.begin(), sds.end(), CompareShotData);
 	/*Compute the distance from the metadata and cg*/
 	uchar c1 = 255, c2 = 128, c3 = 0;

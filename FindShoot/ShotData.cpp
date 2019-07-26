@@ -2,6 +2,7 @@
 #include "ShotData.h"
 #include <iostream>
 #include "ContourData.h"
+#include "MovmentUtils.h"
 
 typedef  pair<Point, float> PointVal;
 
@@ -94,26 +95,42 @@ void FloodfillNeigh(Mat& vals, const Mat& time, int ariveTime, Point q, int SEED
 int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotData>& shots, int isDebugMode)
 {
 	int numOfShots = 0;
-	Mat hist, histThr, mask, lowHistThr;
-	histMat.convertTo(hist, CV_32FC1);
+	Mat hist, histThr, histThrL, histThrH, mask, lowHistThr;
+	double mn16, mx16;
+	minMaxLoc(histMat, &mn16, &mx16);
+	int thrLow = (int)(255.0*thresholdInHist / mx16);
+	histMat.convertTo(hist, CV_8UC1,255.0/max(1.0, mx16));
 	Size sz = histMat.size();
-	//while (thresholdInHist > 0)
-	//{
-	threshold(hist, histThr, thresholdInHist, 255, THRESH_BINARY);
-	//	histThr.convertTo(histThr, CV_8UC1);
-	//	cv::imshow("histThr1", histThr);
-	//	cv::waitKey();
-	//	--thresholdInHist;
-	//}
+
+	//Doing 2 thresholds high and low, selecting the one with more contours
+	threshold(hist, histThrL, 20, 255, THRESH_BINARY);
+	threshold(hist, histThrH, 120, 255, THRESH_BINARY);
+	vector<vector<Point> > contours;
+	vector<Vec4i> hierarchyFirst;
+	cv::findContours(histThrH, contours, hierarchyFirst, RETR_CCOMP, CHAIN_APPROX_NONE);
+	int numOfCurContoursHigh = (int)contours.size();
+
+	cv::findContours(histThrL, contours, hierarchyFirst, RETR_CCOMP, CHAIN_APPROX_NONE);
+	int numOfCurContoursLow = (int)contours.size();
+	if (numOfCurContoursHigh > numOfCurContoursLow)
+	{
+		histThrH.copyTo(histThr);
+	}
+	else
+	{
+		histThrL.copyTo(histThr);
+	}
+	cv::imshow("histThr1", histThr);
+
+	histThr.convertTo(histThr, CV_32FC1);
+	hist.convertTo(hist, CV_32FC1);
 	
 	Mat time, thrTime32, thrTime;
 	timeMat.convertTo(time, CV_32FC1);
 	//Find all pixels that were ON before frame 100
 	threshold(time, thrTime32, 100, 255, THRESH_BINARY_INV);
 	thrTime32.convertTo(thrTime, CV_8U);
-	histThr.setTo(0, thrTime);
-	//cv::imshow("timeThr", thrTime);
-	//cv::waitKey();
+	cv::imshow("timeThr", thrTime);
 
 	Mat dispShots;
 	if (isDebugMode)
@@ -126,7 +143,7 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 	
 	
 	int cnt = 0;
-	int tolH = 150; //upper and lower diff to distitinguish between tight shots
+	int tolH = 150; //upper and lower diff to distinguish between tight shots
 	int tolL = 150;
 	//Go over the pixels of the threshold hist mat, every pixel that is above thr is shot cand
 	for (int r = 0; r < sz.height; ++r)
@@ -173,7 +190,7 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 					if (sd.mPoints[s].second.second < t)
 						t = sd.mPoints[s].second.second;
 				}
-				if (t > 4 * 25 && sd.mLen > 10)
+				if (t > 5 * 25 && sd.mLen > 1)
 					shots.push_back(sd);
 			}
 		}
@@ -392,15 +409,15 @@ int ShotData::Split(vector<ShotData>& sds, const Mat& timeMat, Mat* displayMat)
 		points.resize(0);
 		spotsMat.copyTo(spotsMatPrev);
 		FloodfillNeigh(spotsMat, timeMat, allP[0].second.second, allP[0].first, (int)allP[l].second.first, diffAllowed, diffAllowed, 0, points, mask, 255);
-		if (0)
-		{
-			Mat spotsMat8;
-			spotsMat.convertTo(spotsMat8, CV_8UC1);
-			circle(spotsMat8, allP[0].first, 3, Scalar(128));
-			cv::imshow("spotsMat", spotsMat8);
-			cv::imshow("displayMat", *displayMat);
-			cv::waitKey();
-		}
+		//if (allP[0].first.x==361 && allP[0].first.y==177)
+		//{
+		//	Mat spotsMat8;
+		//	spotsMat.convertTo(spotsMat8, CV_8UC1);
+		//	circle(spotsMat8, allP[0].first, 3, Scalar(128));
+		//	cv::imshow("spotsMat", spotsMat8);
+		//	cv::imshow("displayMat", *displayMat);
+		//	cv::waitKey();
+		//}
 		
 		int pSz = (int)points.size();
 		if (pSz > 6)
