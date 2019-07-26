@@ -383,7 +383,7 @@ int ShotData::Split(vector<ShotData>& sds, const Mat& timeMat, Mat* displayMat)
 	
 	sort(allP.begin(), allP.end(), ComparePix);
 	float curMaxVal = allP[0].second.first;
-	int binInterval = 100;
+	int binInterval = 20;
 	int numOfBins = (int)(curMaxVal / binInterval);
 	if (numOfBins <= 1)
 		return numOfShots;
@@ -411,12 +411,12 @@ int ShotData::Split(vector<ShotData>& sds, const Mat& timeMat, Mat* displayMat)
 		FloodfillNeigh(spotsMat, timeMat, allP[0].second.second, allP[0].first, (int)allP[l].second.first, diffAllowed, diffAllowed, 0, points, mask, 255);
 		//if (allP[0].first.x==361 && allP[0].first.y==177)
 		//{
-		//	Mat spotsMat8;
-		//	spotsMat.convertTo(spotsMat8, CV_8UC1);
-		//	circle(spotsMat8, allP[0].first, 3, Scalar(128));
-		//	cv::imshow("spotsMat", spotsMat8);
-		//	cv::imshow("displayMat", *displayMat);
-		//	cv::waitKey();
+			//Mat spotsMat8;
+			//spotsMat.convertTo(spotsMat8, CV_8UC1);
+			//circle(spotsMat8, allP[0].first, 3, Scalar(128));
+			//cv::imshow("spotsMat", spotsMat8);
+			//cv::imshow("displayMat", *displayMat);
+			//cv::waitKey();
 		//}
 		
 		int pSz = (int)points.size();
