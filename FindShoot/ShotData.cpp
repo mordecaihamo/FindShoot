@@ -190,7 +190,8 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 					if (sd.mPoints[s].second.second < t)
 						t = sd.mPoints[s].second.second;
 				}
-				if (t > 5 * 25 && sd.mLen > 1)
+				//Delete shots that appeared before 4 seconds
+				if (t > 4 * 25 && sd.mLen > 1)
 					shots.push_back(sd);
 			}
 		}
