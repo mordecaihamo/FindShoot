@@ -102,35 +102,45 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 	histMat.convertTo(hist, CV_8UC1,255.0/max(1.0, mx16));
 	Size sz = histMat.size();
 
+	Mat time, thrTime32, thrTime;
+	timeMat.convertTo(time, CV_32FC1);
+	//Find all pixels that were ON before frame 100
+	threshold(time, thrTime32, 100, 255, THRESH_BINARY);
+	thrTime32.convertTo(thrTime, CV_8U);
+
+	Erosion(thrTime, thrTime, 1);
+	Dilation(thrTime, thrTime, 1);
+	cv::imshow("timeThr", thrTime);
+	cv::imshow("histMat", hist);
+
 	//Doing 2 thresholds high and low, selecting the one with more contours
+	//If its too low then a lot of contours were connected to each other
+	//If its too high then a lot of contours disappeared
 	threshold(hist, histThrL, 20, 255, THRESH_BINARY);
 	threshold(hist, histThrH, 120, 255, THRESH_BINARY);
+	Mat histThrLclean, histThrHclean;
+	histThrL.copyTo(histThrLclean, thrTime);
+	histThrH.copyTo(histThrHclean, thrTime);
+
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchyFirst;
-	cv::findContours(histThrH, contours, hierarchyFirst, RETR_CCOMP, CHAIN_APPROX_NONE);
+	cv::findContours(histThrHclean, contours, hierarchyFirst, RETR_CCOMP, CHAIN_APPROX_NONE);
 	int numOfCurContoursHigh = (int)contours.size();
 
-	cv::findContours(histThrL, contours, hierarchyFirst, RETR_CCOMP, CHAIN_APPROX_NONE);
+	cv::findContours(histThrLclean, contours, hierarchyFirst, RETR_CCOMP, CHAIN_APPROX_NONE);
 	int numOfCurContoursLow = (int)contours.size();
 	if (numOfCurContoursHigh > numOfCurContoursLow)
 	{
-		histThrH.copyTo(histThr);
+		histThrHclean.copyTo(histThr);
 	}
 	else
 	{
-		histThrL.copyTo(histThr);
+		histThrLclean.copyTo(histThr);
 	}
 	cv::imshow("histThr1", histThr);
 
 	histThr.convertTo(histThr, CV_32FC1);
 	hist.convertTo(hist, CV_32FC1);
-	
-	Mat time, thrTime32, thrTime;
-	timeMat.convertTo(time, CV_32FC1);
-	//Find all pixels that were ON before frame 100
-	threshold(time, thrTime32, 100, 255, THRESH_BINARY_INV);
-	thrTime32.convertTo(thrTime, CV_8U);
-	cv::imshow("timeThr", thrTime);
 
 	Mat dispShots;
 	if (isDebugMode)
@@ -192,7 +202,10 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 				}
 				//Delete shots that appeared before 4 seconds
 				if (t > 4 * 25 && sd.mLen > 1)
+				{
+					sd.mValueInTime = t;
 					shots.push_back(sd);
+				}
 			}
 		}
 	}
