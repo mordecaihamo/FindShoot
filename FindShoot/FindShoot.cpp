@@ -192,8 +192,6 @@ int Analyze(char* vidName, int isDebugMode)
 	}
 	fName = fName.substr(0, posOfLastDot);
 
-	ofstream fout;
-	fout.open(dirName + fName + ".csv");
 	String lastFramePath = dirName + fName + "/lastFrame.bmp";
 	String mdFileName = dirName + fName + ".txt";
 
