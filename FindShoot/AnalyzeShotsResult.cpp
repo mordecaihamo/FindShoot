@@ -84,7 +84,7 @@ int AnalyzeShotsResult::Compute(String& resultFileName, int isDebugMode)
 	double mn16sc, mx16sc;
 	minMaxLoc(shotsFound, &mn16sc, &mx16sc);
 	threshold(shotsFound, shotsFound, minHistThr, 255, THRESH_BINARY);
-	minHistThr = mx16 * 80 / 255;
+	
 	mShotsHistogramMat.convertTo(shot, shot.type(), 255.0 / max(1.0, mx16));
 	cv::imshow("shotsHistogramMat", shot);
 	minMaxLoc(mShotsFrameNumMat, &mn16, &mx16);

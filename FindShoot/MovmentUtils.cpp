@@ -2,12 +2,13 @@
 #include "MovmentUtils.h"
 #include <vector>
 #include "opencv2/highgui.hpp"
-#include <iostream>
+//#include <iostream>
+#include <windows.h>
 
-using namespace cv;
+//using namespace cv;
 
 /**  @function Erosion  */
-void Erosion(Mat &src, Mat &dst, int erosion_size, int erosion_type)
+void Erosion(cv::Mat &src, cv::Mat &dst, int erosion_size, int erosion_type)
 {
 	int erosion_elem = 2;
 	int dilation_elem = 0;
@@ -18,16 +19,16 @@ void Erosion(Mat &src, Mat &dst, int erosion_size, int erosion_type)
 	//else if (erosion_elem == 1) { erosion_type = MORPH_CROSS; }
 	//else if (erosion_elem == 2) { erosion_type = MORPH_ELLIPSE; }
 
-	Mat element = getStructuringElement(erosion_type,
-		Size(2 * erosion_size + 1, 2 * erosion_size + 1),
-		Point(erosion_size, erosion_size));
+	cv::Mat element = getStructuringElement(erosion_type,
+		cv::Size(2 * erosion_size + 1, 2 * erosion_size + 1),
+		cv::Point(erosion_size, erosion_size));
 
 	/// Apply the erosion operation
 	erode(src, dst, element);
 }
 
 /** @function Dilation */
-void Dilation(Mat &src, Mat &dst, int dilation_size, int dilation_type)
+void Dilation(cv::Mat &src, cv::Mat &dst, int dilation_size, int dilation_type)
 {
 	int erosion_elem = 2;
 	int dilation_elem = 0;
@@ -38,48 +39,68 @@ void Dilation(Mat &src, Mat &dst, int dilation_size, int dilation_type)
 	//else if (dilation_elem == 1) { dilation_type = MORPH_CROSS; }
 	//else if (dilation_elem == 2) { dilation_type = MORPH_ELLIPSE; }
 
-	Mat element = getStructuringElement(dilation_type,
-		Size(2 * dilation_size + 1, 2 * dilation_size + 1),
-		Point(dilation_size, dilation_size));
+	cv::Mat element = getStructuringElement(dilation_type,
+		cv::Size(2 * dilation_size + 1, 2 * dilation_size + 1),
+		cv::Point(dilation_size, dilation_size));
 	/// Apply the dilation operation
 	dilate(src, dst, element);
 }
 
-void FindMovment(Mat& a, Mat& b, int& x, int& y, Rect& rct, int lookDis,bool isToZero, bool isToDisplay)
+void FindMovment(cv::Mat& a, cv::Mat& b, int& x, int& y, cv::Rect& rct, int lookDis,bool isToZero, bool isToDisplay)
 {
 	int H = a.size().height;
 	int W = a.size().width;
-	Rect rctMov(rct);
+	cv::Rect rctMov(rct);
 	rctMov.height -= 2 * lookDis;
 	rctMov.width -= 2 * lookDis;
-	Mat ar = a(rctMov);
+	cv::Mat ar = a(rctMov);
 	rctMov.x += lookDis;
 	rctMov.y += lookDis;
-	Mat br = b(rctMov);
-	Mat diff(rctMov.height, rctMov.width, CV_8U);
+
+	cv::Mat br = b(rctMov);
+	cv::Mat diff(rctMov.height, rctMov.width, CV_8U);
 	diff.setTo(0);
 	double dMn = DBL_MAX;
 	int rMn = -1;
 	int cMn = -1;
-	for (int r = rct.y - lookDis + 1; r < rct.y + lookDis - 1; ++r)
+	int yst = rct.y + y - lookDis + 1;
+	if (yst < 0)
+		yst = 0;
+	int yed = rct.y + y + lookDis - 1;
+	if (yed >= H)
+		yed = H - 1;
+	int xst = rct.x + x - lookDis + 1;
+	if (xst < 0)
+		xst = 0;
+	int xed = rct.x + x + lookDis - 1;
+	if (xed >= W)
+		xed = W - 1;
+
+	for (int r = yst; r < yed; ++r)
 	{
 		rctMov.y = r;
-		for (int c = rct.x - lookDis + 1; c < rct.x + lookDis - 1; ++c)
+		for (int c = xst; c < xed; ++c)
 		{
 			rctMov.x = c;
-			Mat br = b(rctMov);
+			cv::Mat br = b(rctMov);
 			diff = abs(ar - br);
-			Scalar s = sum(diff);
+			cv::Scalar s = sum(diff);
 			double d = s[0] + s[1] + s[2];
 			if (isToDisplay)
 			{
-				cout << r << "(" << rct.y - lookDis + 1 << "," << rct.y + lookDis - 1 << ")" << endl;
-				cout << c << "(" << rct.x - lookDis + 1 << "," << rct.x + lookDis - 1 << ")" << endl;
-				cout << d << endl;
+				char buf[512] = { '\0' };
+				sprintf_s(buf, "Move (%d,%d)\n", c,r);
+				OutputDebugStringA(buf);
+				sprintf_s(buf, "(%d,%d)\n", rctMov.y - lookDis + 1, rctMov.y + lookDis - 1);
+				OutputDebugStringA(buf);
+				sprintf_s(buf, "(%d,%d)\n", rctMov.x - lookDis + 1, rctMov.x + lookDis - 1);
+				OutputDebugStringA(buf);
+				sprintf_s(buf, "=%f\n", d);
+				OutputDebugStringA(buf);
 				imshow("ar", ar);
 				imshow("br", br);
 				imshow("diff", diff);
-				waitKey();
+				cv::waitKey();
 			}
 			if (d < dMn)
 			{
@@ -93,21 +114,21 @@ void FindMovment(Mat& a, Mat& b, int& x, int& y, Rect& rct, int lookDis,bool isT
 	{
 		rctMov.x = cMn;
 		rctMov.y = rMn;
-		Mat br = b(rctMov);
+		cv::Mat br = b(rctMov);
 		imshow("ar", ar);
 		ar.setTo(0, br);
 		imshow("br", br);
 		imshow("arAfter", ar);
-		waitKey();
+		cv::waitKey();
 	}
 	x = cMn - rct.x;
 	y = rMn - rct.y;
 }
 
 using namespace std;
-Rect FindInboundRect(Rect rct, const Point* rectPoints)
+cv::Rect FindInboundRect(cv::Rect rct, const cv::Point* rectPoints)
 {
-	Rect rctInBound(rct);
+	cv::Rect rctInBound(rct);
 	vector<int> x(4,0), y(4,0);
 	for (int i = 0; i < 4; ++i)
 	{
@@ -137,26 +158,32 @@ Rect FindInboundRect(Rect rct, const Point* rectPoints)
 	return rctInBound;
 }
 
-void ThresholdByLightMap(Mat& inMat, Mat& outMat, Mat& lightMat, float percFromLight, Rect& inRect, Rect& lightRect)
+void ThresholdByLightMap(cv::Mat& inMat, cv::Mat& outMat, cv::Mat& lightMat, float percFromLight, cv::Rect& inRect, cv::Rect& lightRect, bool isDebug)
 {
-	Mat img, l;
+	cv::Mat img, l;
 	inMat.copyTo(img);
 	lightMat.copyTo(l);
-	Size sz = lightMat.size();
-	
-	Mat l1 = img(inRect);
-	Mat l2 = l(lightRect);
-	
-	Mat l3 = l1 - l2 * percFromLight;
+	cv::Size sz = lightMat.size();
+
+	cv::Mat l1 = img(inRect);
+	cv::Mat l2 = l(lightRect);
+	if (isDebug)
+	{
+		imshow("l1", l1);
+	}
+	cv::Mat l3 = l1 - l2 * percFromLight;
 	img.setTo(0);
 	l3.copyTo(l1);
-	threshold(img, outMat, 1.0f, 255, THRESH_BINARY_INV);
-
-	//imshow("l1", l1);
-	//imshow("l2", l2);
-	//imshow("I", inMat);
-	//imshow("O", outMat);
-	//imshow("L", l);
-	//imshow("D", img);
-	//waitKey();
+	threshold(img, outMat, 1.0f, 255, cv::THRESH_BINARY_INV);
+	if (isDebug)
+	{
+		imshow("l2", l2);		
+		imshow("I", inMat);
+		imshow("O", outMat);
+		imshow("L", l);
+		imshow("D", img);
+		threshold(l1, l3, 1.0f, 255, cv::THRESH_BINARY_INV);
+		imshow("l3", l3);
+		cv::waitKey();
+	}
 }

@@ -95,7 +95,7 @@ void FloodfillNeigh(Mat& vals, const Mat& time, int ariveTime, Point q, int SEED
 int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotData>& shots, int isDebugMode)
 {
 	int numOfShots = 0;
-	Mat hist, histThr, histThrL, histThrH, mask, lowHistThr;
+	Mat hist, histThr, histThrL16, histThrH16, histThrL, histThrH, mask, lowHistThr;
 	double mn16, mx16;
 	minMaxLoc(histMat, &mn16, &mx16);
 	int thrLow = (int)(255.0*thresholdInHist / mx16);
@@ -105,19 +105,32 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 	Mat time, thrTime32, thrTime;
 	timeMat.convertTo(time, CV_32FC1);
 	//Find all pixels that were ON before frame 100
-	threshold(time, thrTime32, 100, 255, THRESH_BINARY);
+	int timeToCleanBefore = 50;
+	threshold(time, thrTime32, timeToCleanBefore, 255, THRESH_BINARY);
 	thrTime32.convertTo(thrTime, CV_8U);
+	cv::imshow("timeTime", thrTime);
 
 	Erosion(thrTime, thrTime, 1);
 	Dilation(thrTime, thrTime, 1);
+	
 	cv::imshow("timeThr", thrTime);
 	cv::imshow("histMat", hist);
 
 	//Doing 2 thresholds high and low, selecting the one with more contours
 	//If its too low then a lot of contours were connected to each other
 	//If its too high then a lot of contours disappeared
-	threshold(hist, histThrL, 20, 255, THRESH_BINARY);
-	threshold(hist, histThrH, 120, 255, THRESH_BINARY);
+	histMat.convertTo(histThrL16, CV_32FC1);
+	histThrL16.copyTo(histThrH16);
+	minMaxLoc(histMat, &mn16, &mx16);
+	threshold(histThrL16, histThrL16, thresholdInHist, 255, THRESH_BINARY);
+	threshold(histThrH16, histThrH16, (int)floor(1.5*thresholdInHist), 255, THRESH_BINARY);
+
+	//threshold(histMat, histThrL16, 20, 255, THRESH_BINARY);
+	//threshold(histMat, histThrH16, 120, 255, THRESH_BINARY);
+	histThrL16.convertTo(histThrL, CV_8U);
+	histThrH16.convertTo(histThrH, CV_8U);
+	cv::imshow("histThrL", histThrL);
+	cv::imshow("histThrH", histThrH);
 	Mat histThrLclean, histThrHclean;
 	histThrL.copyTo(histThrLclean, thrTime);
 	histThrH.copyTo(histThrHclean, thrTime);
@@ -129,13 +142,22 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 
 	cv::findContours(histThrLclean, contours, hierarchyFirst, RETR_CCOMP, CHAIN_APPROX_NONE);
 	int numOfCurContoursLow = (int)contours.size();
+#define WITH_CLEAN
 	if (numOfCurContoursHigh > numOfCurContoursLow)
 	{
+#ifdef WITH_CLEAN
 		histThrHclean.copyTo(histThr);
+#else
+		histThrH.copyTo(histThr);
+#endif
 	}
 	else
 	{
+#ifdef WITH_CLEAN
 		histThrLclean.copyTo(histThr);
+#else
+		histThrL.copyTo(histThr);
+#endif
 	}
 	cv::imshow("histThr1", histThr);
 
@@ -201,7 +223,7 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 						t = sd.mPoints[s].second.second;
 				}
 				//Delete shots that appeared before 4 seconds
-				if (t > 4 * 25 && sd.mLen > 1)
+				if (t > timeToCleanBefore && sd.mLen > 1)
 				{
 					sd.mValueInTime = t;
 					shots.push_back(sd);

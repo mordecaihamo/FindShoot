@@ -5,18 +5,18 @@
 //#include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"
 
-using namespace cv;
+//using namespace cv;
 using namespace std;
 /**  @function Erosion  */
-void Erosion(Mat &src, Mat &dst, int erosion_size, int erosionType = 0);
+void Erosion(cv::Mat &src, cv::Mat &dst, int erosion_size, int erosionType = 0);
 /** @function Dilation */
-void Dilation(Mat &src, Mat &dst, int dilation_size, int dilationType = 0);
+void Dilation(cv::Mat &src, cv::Mat &dst, int dilation_size, int dilationType = 0);
 
-void FindMovment(Mat& a, Mat& b, int& x, int& y, Rect& rct, int lookDis, bool isToZero = false, bool isToDisplay = false);
+void FindMovment(cv::Mat& a, cv::Mat& b, int& x, int& y, cv::Rect& rct, int lookDis, bool isToZero = false, bool isToDisplay = false);
 
-Rect FindInboundRect(Rect rct, const Point* rectPoints);
+cv::Rect FindInboundRect(cv::Rect rct, const cv::Point* rectPoints);
 
-void ThresholdByLightMap(Mat& inMat, Mat& outMat, Mat& lightMat, float percFromLight, Rect& inRect, Rect& lightRect);
+void ThresholdByLightMap(cv::Mat& inMat, cv::Mat& outMat, cv::Mat& lightMat, float percFromLight, cv::Rect& inRect, cv::Rect& lightRect, bool isToDisplay = false);
 
 template<class AUC>
 AUC AucDis(AUC ax, AUC ay, AUC bx, AUC by)

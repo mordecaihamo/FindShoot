@@ -486,7 +486,6 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 	//imshow("firstFrame", firstFrame);
 	//imshow("firstFrameSmooth", firstFrameSmooth);
 	//waitKey();
-	//Mat grad8Thr, 
 	Mat matAdpt(cropSz.height, cropSz.width, CV_8UC1);
 	Mat frameRgb;
 	Mat frameRgbDisplayed;
@@ -517,7 +516,6 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 
 			if (frame.size().height == 0)
 				break;
-			//if (cntFrameNum < 1475) continue;
 
 			resize(frame, frameRgb, sz);
 			if (abs(x) < 25 && abs(y) < 25)
@@ -570,9 +568,10 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 			smallFrame = imread(buf.str());
 			cvtColor(smallFrame, smallFrame, COLOR_BGR2GRAY);
 		}
-		Trace("****t02*****");		
-		FindMovment(firstFrame, smallFrame, x, y, rectInBound, look, false, false);
-		Trace("****t03*****");
+		if (cntFrameNum < 100000000000766)
+			FindMovment(firstFrame, smallFrame, x, y, rectInBound, look, false, false);
+		else
+			FindMovment(firstFrame, smallFrame, x, y, rectInBound, look, false, true);
 		Point pntMov(x, y);
 		//Rect in the current frame after move correction, corresponds to rctInFirstFrame
 		Rect rctMove;
@@ -596,16 +595,13 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 			pointsRect[p] = metaData.mPoints[p] + pntMov;
 		}
 		drawPolyRect(mapMove, pointsRect, Scalar(0), -1);
-//		bitwise_not(mapMove, mapNot);
+		//Zero the area outside the target after move correction
 		smallFrame.setTo(0, mapMove);
-		//Mat smallFrameCalib = smallFrame(rctMove);
-		//Mat firstFrameCalib = firstFrame(rctInFirstFrame);
-		//Mat diffFrame = smallFrameCalib - firstFrameCalib;
-		//Mat diffThrFrame;
-		//threshold(diffFrame, diffThrFrame, 5, 255, THRESH_BINARY);
-		//threshold(smallFrame, matAdpt, 100, 255, THRESH_BINARY_INV);
-		ThresholdByLightMap(smallFrame, matAdpt, firstFrameSmooth, 0.7, rctMove, rctInFirstFrame);
-		//adaptiveThreshold(smallFrame, matAdpt, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, (((int)floor(2*sz.width)) | 1), 0);
+		//smallFrame - (firstFrameSmooth*0.7) > 1 => matAdpt [done with move correction]
+		if (cntFrameNum < 100000000000766)
+			ThresholdByLightMap(smallFrame, matAdpt, firstFrameSmooth, 0.7, rctMove, rctInFirstFrame);
+		else
+			ThresholdByLightMap(smallFrame, matAdpt, firstFrameSmooth, 0.7, rctMove, rctInFirstFrame, true);
 		Trace("****t04*****");
 
 		matAdpt.setTo(0, mapMove);
@@ -613,7 +609,7 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 		sprintf_s(buf, "FindShot: F=%d move x=%d y=%d.\n", cntFrameNum, x, y);
 		OutputDebugStringA(buf);
 
-		if (isDebugMode)
+		if (isDebugMode )
 		{
 			cv::imshow("matAdptAfterClean", matAdpt);
 			cv::waitKey();
