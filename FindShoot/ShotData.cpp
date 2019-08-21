@@ -142,11 +142,11 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 
 	cv::findContours(histThrLclean, contours, hierarchyFirst, RETR_CCOMP, CHAIN_APPROX_NONE);
 	int numOfCurContoursLow = (int)contours.size();
-#define WITH_CLEAN
+//#define WITH_CLEAN
 	if (numOfCurContoursHigh > numOfCurContoursLow)
 	{
 #ifdef WITH_CLEAN
-		histThrHclean.copyTo(histThr);
+		histThrLclean.copyTo(histThr);
 #else
 		histThrH.copyTo(histThr);
 #endif
@@ -171,9 +171,7 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 		dispShots.setTo(0);
 		threshold(hist, lowHistThr, thresholdInHist >> 2, 255, THRESH_BINARY);
 	}
-	
-	
-	
+		
 	int cnt = 0;
 	int tolH = 150; //upper and lower diff to distinguish between tight shots
 	int tolL = 150;
@@ -195,7 +193,9 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 					Mat dispHist;
 					hist.convertTo(dispHist, CV_8U, 255.0 / max(1.0, mx16));
 					rectangle(dispHist, Point(c - 5, r - 5), Point(min(sz.width - 1, c + 5), min(sz.height - 1, r + 5)), Scalar(255.0));
+					rectangle(histThrLclean, Point(c - 5, r - 5), Point(min(sz.width - 1, c + 5), min(sz.height - 1, r + 5)), Scalar(255.0));
 					cv::imshow("histBefore", dispHist);
+					cv::imshow("histThrBefore", histThrLclean);
 					//cv::waitKey();
 				}
 				if (val - tolL < thresholdInHist)

@@ -73,7 +73,7 @@ int AnalyzeShotsResult::Compute(String& resultFileName, int isDebugMode)
 	Size sz = mShotsHistogramMat.size();
 	if (mShotsHistogramMat.empty() || mShotsFrameNumMat.empty())
 		return -1;
-	int minHistThr = 50;
+	int minHistThr = 10;
 	cv::destroyAllWindows();
 	double mn16, mx16;
 	Mat shot(sz, CV_8UC1);
