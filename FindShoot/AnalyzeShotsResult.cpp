@@ -92,15 +92,19 @@ int AnalyzeShotsResult::Compute(String& resultFileName, int isDebugMode)
 	cv::imshow("shotsFrameNumMat", shot);
 	shotsFound.convertTo(shot, shot.type());
 	cv::imshow("shotsFound", shot);
-	Mat frameWithMarks;
+	Mat frameWithMarks, canMat;
 	if (!mLastFrame.empty())
 	{
 		cv::imshow("LastFrame", mLastFrame);
 		mLastFrame.copyTo(frameWithMarks);
+		int thrOfGrad = 60;
+		Canny(mLastFrame, canMat, thrOfGrad, 2.75 * thrOfGrad);		
+		cv::imshow("canMat", canMat);
 	}
 	//cv::waitKey();
 	vector<ShotData> sds;
-	numOfShots = LookForShots(mShotsHistogramMat, mShotsFrameNumMat, minHistThr, sds, isDebugMode);
+	
+	numOfShots = LookForShots(mShotsHistogramMat, mShotsFrameNumMat, canMat, minHistThr, sds, mXmove, mYmove, isDebugMode);
 	sort(sds.begin(), sds.end(), CompareShotData);
 	/*Compute the distance from the metadata and cg*/
 	uchar c1 = 255, c2 = 128, c3 = 0;

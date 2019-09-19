@@ -602,15 +602,20 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 			ThresholdByLightMap(smallFrame, matAdpt, firstFrameSmooth, 0.7, rctMove, rctInFirstFrame);
 		else
 			ThresholdByLightMap(smallFrame, matAdpt, firstFrameSmooth, 0.7, rctMove, rctInFirstFrame, true);
-		Trace("****t04*****");
+		//The pixels than survived the threshold are shot cand and will be added to the histogram.
+		//We want to delete the false one that were generated from little movments between the frames.
+		//We will do that by checking if 
+
 
 		matAdpt.setTo(0, mapMove);
 		char buf[256] = { '\0' };
 		sprintf_s(buf, "FindShot: F=%d move x=%d y=%d.\n", cntFrameNum, x, y);
 		OutputDebugStringA(buf);
 
-		if (isDebugMode )
+		//if (isDebugMode )
 		{
+			cv::imshow("I", smallFrame);
+			cv::imshow("firstFrameSmooth", firstFrameSmooth);
 			cv::imshow("matAdptAfterClean", matAdpt);
 			cv::waitKey();
 		}

@@ -90,9 +90,148 @@ void FloodfillNeigh(Mat& vals, const Mat& time, int ariveTime, Point q, int SEED
 		}
 	}
 }
+//Will return if touching canny
+int IsTouchingCanny(vector<pair<Point, pair<float, int>>>& points, Mat& canMat, int mXmove, int mYmove )
+{
+	int isTouch = 0;
+	//find if canny exist in 3 out of 4 directions
+	int w = canMat.cols;
+	int h = canMat.rows;
+	int mostLeftInd = 0;
+	int mostRightInd = 0;
+	int mostTopInd = 0;
+	int mostBottomInd = 0;
+	int numOfPoints = (int)points.size();
+	for (int ind = 0; ind < numOfPoints; ++ind)
+	{
+		if (points[ind].first.x <= points[mostLeftInd].first.x)
+			mostLeftInd = ind;
+		if (points[ind].first.x >= points[mostRightInd].first.x)
+			mostRightInd = ind;
+		if (points[ind].first.y <= points[mostTopInd].first.y)
+			mostTopInd = ind;
+		if (points[ind].first.y >= points[mostBottomInd].first.y)
+			mostBottomInd = ind;
+	}
+	int isExist[4] = { 0 };
+	int isExistSum = 0;
+	//Look for canny in the left
+	int look = 10;
+	int shift = 3;
+	int x, y, xstop, ystop;
+	bool isDebugMode = false;
+	Mat dispHist;
+	if (isDebugMode)
+	{
+		canMat.copyTo(dispHist);
+		for (int i = 0; i < numOfPoints; ++i)
+		{
+			x = points[i].first.x + mXmove;
+			y = points[i].first.y + mYmove;
+			if (x >= 0 && x < w && y >= 0 && y < h)
+				dispHist.at<uchar>(y,x) = 100;
+		}
+	}
 
+	x = points[mostLeftInd].first.x + mXmove + shift;
+	y = points[mostLeftInd].first.y + mYmove;
+	if (x >= 0 && x < w && y >= 0 && y < h)
+	{
+		xstop = max(0, x - look);
+		for (; x >= xstop; --x)
+		{
+			int val = canMat.at<uchar>(y, x);
+			if (isDebugMode)
+			{
+				dispHist.at<uchar>(y, x) = 150;
+				cv::imshow("movCan", dispHist);
+				//cv::waitKey();
+			}
+			if (val > 0)
+			{
+				isExist[0] = 1;
+				++isExistSum;
+				break;
+			}
+		}
+	}
+
+	x = points[mostTopInd].first.x + mXmove;
+	y = points[mostTopInd].first.y + mYmove + shift;
+	if (x >= 0 && x < w && y >= 0 && y < h)
+	{
+		ystop = max(y - look, 0);
+		for (; y >= ystop; --y)
+		{
+			int val = canMat.at<uchar>(y, x);
+			if (isDebugMode)
+			{
+				dispHist.at<uchar>(y, x) = 150;
+				cv::imshow("movCan", dispHist);
+				//cv::waitKey();
+			}
+			if (val > 0)
+			{
+				isExist[1] = 1;
+				++isExistSum;
+				break;
+			}
+		}
+	}
+
+	x = points[mostRightInd].first.x + mXmove - shift;
+	y = points[mostRightInd].first.y + mYmove;
+	if (x >= 0 && x < w && y >= 0 && y < h)
+	{
+		xstop = min(w - 1, x + look);
+		for (; x <= xstop; ++x)
+		{
+			int val = canMat.at<uchar>(y, x);
+			if (isDebugMode)
+			{
+				dispHist.at<uchar>(y, x) = 150;
+				cv::imshow("movCan", dispHist);
+				//cv::waitKey();
+			}
+			if (val > 0)
+			{
+				isExist[2] = 1;
+				++isExistSum;
+				break;
+			}
+		}
+	}
+
+	x = points[mostBottomInd].first.x + mXmove;
+	y = points[mostBottomInd].first.y + mYmove - shift;
+	if (x >= 0 && x < w && y >= 0 && y < h)
+	{
+		ystop = min(h - 1, y + look);
+		for (; y <= ystop; ++y)
+		{
+			int val = canMat.at<uchar>(y, x);
+			if (isDebugMode)
+			{
+				dispHist.at<uchar>(y, x) = 150;
+				cv::imshow("movCan", dispHist);
+				//cv::waitKey();
+			}
+			if (val > 0)
+			{
+				isExist[3] = 1;
+				++isExistSum;
+				break;
+			}
+		}
+	}
+	if (isDebugMode)
+		cv::waitKey();
+	if (isExistSum >= 3)
+		isTouch = 1;
+	return isTouch;
+}
 //#define _DISPLAY
-int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotData>& shots, int isDebugMode)
+int LookForShots(Mat& histMat, Mat& timeMat, Mat& canMat, int thresholdInHist, vector<ShotData>& shots, int mXmove, int mYmove, int isDebugMode)
 {
 	int numOfShots = 0;
 	Mat hist, histThr, histThrL16, histThrH16, histThrL, histThrH, mask, lowHistThr;
@@ -135,13 +274,16 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 	histThrL.copyTo(histThrLclean, thrTime);
 	histThrH.copyTo(histThrHclean, thrTime);
 
-	vector<vector<Point> > contours;
-	vector<Vec4i> hierarchyFirst;
-	cv::findContours(histThrHclean, contours, hierarchyFirst, RETR_CCOMP, CHAIN_APPROX_NONE);
-	int numOfCurContoursHigh = (int)contours.size();
+	vector<vector<Point> > contoursH;
+	vector<Vec4i> hierarchyFirstH;
+	cv::findContours(histThrHclean, contoursH, hierarchyFirstH, RETR_CCOMP, CHAIN_APPROX_NONE);
+	int numOfCurContoursHigh = (int)contoursH.size();
 
-	cv::findContours(histThrLclean, contours, hierarchyFirst, RETR_CCOMP, CHAIN_APPROX_NONE);
-	int numOfCurContoursLow = (int)contours.size();
+	vector<vector<Point> > contoursL;
+	vector<Vec4i> hierarchyFirstL;
+	cv::findContours(histThrLclean, contoursL, hierarchyFirstL, RETR_CCOMP, CHAIN_APPROX_NONE);
+	int numOfCurContoursLow = (int)contoursL.size();
+
 //#define WITH_CLEAN
 	if (numOfCurContoursHigh > numOfCurContoursLow)
 	{
@@ -203,6 +345,10 @@ int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotDat
 				//Get the points that touching it
 				vector<pair<Point, pair<float, int>>> points;
 				FloodfillIter(histThr, Point(c, r), thrval, tolL, tolH, cnt, points, hist, 0);
+				//Delete shots that canny doesn't surround them
+				int isTouch = IsTouchingCanny(points, canMat, mXmove, mYmove);
+				if (isTouch == 0)
+					continue;
 				ShotData sd(points,timeMat);
 				if (isDebugMode)
 				{

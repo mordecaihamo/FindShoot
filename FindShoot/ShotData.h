@@ -36,5 +36,5 @@ public:
 	bool IsItShot();
 };
 
-int LookForShots(Mat& histMat, Mat& timeMat, int thresholdInHist, vector<ShotData>& shots, int isDebugMode);
+int LookForShots(Mat& histMat, Mat& timeMat, Mat& canMat, int thresholdInHist, vector<ShotData>& shots, int mXmove, int mYmove, int isDebugMode);
 #endif
