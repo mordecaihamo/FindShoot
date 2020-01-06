@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Forms;
 using PixelFormat = System.Drawing.Imaging.PixelFormat;
 
 namespace ShotTracker
@@ -28,7 +29,7 @@ namespace ShotTracker
 #endif
         public static extern int Analyze(string vidName, int isDebugMode);
 
-        string mVidFile;
+        string mPicsFolder;
 
         public MainWindow()
         {
@@ -39,10 +40,10 @@ namespace ShotTracker
         {
             //mVidFile = "C:/moti/FindShoot/videos/MVI_3.MOV";
             
-            if (mVidFile == null)
+            if (mPicsFolder == null)
                 return;
-            int bmWidth = 800;
-            int bmHeight = bmWidth * 4 / 3;
+            int bmWidth = 600;
+            int bmHeight = 800;
             int isDebugMode = chkBoxIsDbg.IsChecked == false ? 0 : 1;
             int processColor = -1;//Gray
             if (radBtnRed.IsChecked == true)
@@ -56,7 +57,7 @@ namespace ShotTracker
             //BitmapData bmpData = managedBitmap.LockBits(new Rectangle(0, 0, managedBitmap.Width, managedBitmap.Height), System.Drawing.Imaging.ImageLockMode.ReadWrite,
             //            System.Drawing.Imaging.PixelFormat.Format24bppRgb);
             
-            Task task1 = Task.Factory.StartNew(() => FindShoots(mVidFile, processColor, managedBitmap.GetHbitmap(), managedBitmap.Width, managedBitmap.Height, isDebugMode));
+            Task task1 = Task.Factory.StartNew(() => FindShoots(mPicsFolder, processColor, managedBitmap.GetHbitmap(), managedBitmap.Width, managedBitmap.Height, isDebugMode));
             //while (!task1.IsCompleted)
             //{             //int res = FindShoots(mVidFile, bmpData.Scan0, managedBitmap.Width, managedBitmap.Height);
             //    Thread.Sleep(40);
@@ -70,15 +71,16 @@ namespace ShotTracker
 
         private void BtnBrowseVidFile_Click(object sender, RoutedEventArgs e)
         {
-            var fileDialog = new System.Windows.Forms.OpenFileDialog();
-            var result = fileDialog.ShowDialog();
+            var fbd = new FolderBrowserDialog();
+            fbd.SelectedPath = @"C:\moti\FindShoot\videos\picsFromShiume\";
+            var result = fbd.ShowDialog();
             switch (result)
             {
                 case System.Windows.Forms.DialogResult.OK:
-                    var file = fileDialog.FileName;
+                    var file = fbd.SelectedPath;
                     txtVidFile.Text = file;
                     txtVidFile.ToolTip = file;
-                    mVidFile = file;
+                    mPicsFolder = file;
                     break;
                 case System.Windows.Forms.DialogResult.Cancel:
                 default:
@@ -91,15 +93,15 @@ namespace ShotTracker
         private void BtnAnalyze_Click(object sender, RoutedEventArgs e)
         {
             //mVidFile = "C:/moti/FindShoot/videos/MVI_3.MOV";
-            if (mVidFile == null)
+            if (mPicsFolder == null)
                 return;
             int bmWidth = 800;
             int bmHeight = bmWidth * 4 / 3;
             int isDebugMode = chkBoxIsDbg.IsChecked == false ? 0 : 1;
             int res = 0;
-            Task task1 = Task.Factory.StartNew(() => { res = Analyze(mVidFile, isDebugMode);
+            Task task1 = Task.Factory.StartNew(() => { res = Analyze(mPicsFolder, isDebugMode);
                 if (res == -1)
-                    MessageBox.Show("You first need to press the PLAY button which will create the data!");
+                    System.Windows.MessageBox.Show("You first need to press the PLAY button which will create the data!");
             });
 
             task1.Wait();

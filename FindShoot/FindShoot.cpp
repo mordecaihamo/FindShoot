@@ -22,6 +22,7 @@
 #include <windows.h>
 #include <strsafe.h>
 
+namespace fs = experimental::filesystem;
 using namespace std;
 using namespace cv;
 
@@ -210,24 +211,27 @@ int Analyze(char* vidName, int isDebugMode)
 }
 
 int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHeight,int imgWidth, int isDebugMode)
-{
-	
+{	
 	String fullFileName(vidName);
 	size_t posOfLastSlash = fullFileName.find_last_of("/\\");
-	String dirName = "";
+	String dirName(vidName);
 	String fName = "";
 	String extName = "";
-	if (posOfLastSlash != string::npos)
+	//Reading the file list in the folder
+	vector<String> fileList;
+	for (const auto & entry : fs::directory_iterator(dirName))
 	{
-		dirName = fullFileName.substr(0, posOfLastSlash + 1);//"C:/moti/FindShoot/";
+		auto t = entry.path().string();
+		int len = t.length();
+		if (t[len - 1] == 'g')
+		{
+			fileList.push_back(t);
+		}
 	}
-	fName = fullFileName.substr(posOfLastSlash + 1);//"MVI_3";	
-	size_t posOfLastDot = fName.find_last_of(".");
-	if (posOfLastDot != string::npos)
-	{
-		extName = fName.substr(posOfLastDot); //".MOV";
-	}
-	fName = fName.substr(0, posOfLastDot);
+	int numOfFiles = (int)fileList.size();
+
+	if (numOfFiles < 2)
+		return 0;
 
 	ofstream fout;
 	fout.open(dirName + fName + ".csv");
@@ -240,16 +244,6 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 		std::cout << fullFileName << " not found!" << endl;
 		fout << fullFileName << " not found!" << endl;
 	}
-	VideoCapture cap(fullFileName);
-	// Check if camera opened successfully
-	if (!cap.isOpened())
-	{
-		std::cout << "Error opening video stream or file" << endl;
-		fout << "Error opening video stream or file" << endl;
-		fout.close();
-		return -1;
-	}
-	int rot = (int)cap.get(cv::CAP_PROP_MODE);
 
 	Mat frame, prevFrame, firstFrame;
 	//Mat sumFrame, tempSumFrame;
@@ -259,56 +253,26 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 	Mat warped;
 	int cntFrameNum = 0;
 	int frameNumAcc = 0;
-	int STARTFRAME = 60;
-	Size sz(-1, -1);
-	for (; cntFrameNum < STARTFRAME; ++cntFrameNum)
-	{
-		std::cout << cntFrameNum << endl;
-		cap >> frame;
-		if (sz.width == -1)
-		{
-			sz = frame.size();
-			if (sz.width != 740)
-			{
-				sz.height = cvRound(sz.height*(740.0f / sz.width));
-				sz.width = 740;
-			}
-
-//			sumFrame = Mat(sz, CV_16UC3);
-			smallFrame = Mat(sz.height, sz.width, frame.type());
-			//firstFrameThrs = Mat(sz.height, sz.width, CV_8UC1);
-			//firstFrameThrs.setTo(0);
-			//tempSumFrame = Mat(sz.height, sz.width, CV_8UC1);
-			//tempSumFrame.setTo(0);
-		}
-		//else if (cntFrameNum > STARTFRAME - 10)
-		//{
-		//	frameNumAcc++;
-		//	resize(frame, smallFrame, sz, 0, 0);
-		//	cvtColor(smallFrame, firstFrame, COLOR_BGR2GRAY);
-		//	adaptiveThreshold(firstFrame, tempSumFrame, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, (((int)floor(1.1*sz.width)) | 1), 0);
-		//	firstFrameThrs = firstFrameThrs | tempSumFrame;
-		//}
-	}
-	//bitwise_not(firstFrameThrs, firstFrameThrs);
-	//bitwise_not(tempSumFrame, tempSumFrame);
-	resize(frame, smallFrame, sz, 0, 0);
+	
+	//wd=740
+	frame = imread(fileList[0].c_str());
 	Size largeSz = frame.size();
+	int w = 740;
+	float ratRsz = w / (largeSz.width*1.0f);
+	int h = (int)(largeSz.height*ratRsz);
+	Size sz(740, h);
+	resize(frame, smallFrame, sz, 0, 0);
+	
 	float ratSmall2Large = (float)largeSz.width / (float)sz.width;
 	float rat = 1.0f;
 
-	if (rot != 0)
-	{
-		//cvtColor(firstFrame, firstFrame, CV_BG);
-		transpose(smallFrame, smallFrame);
-	}
 	ShootTargetMetaData metaData;
 	int desiredTargetWidth = 300;
 	int marginsTarget = 220;
 	int margins = 10;
+	//If there is no file, prepare the target location
 	if (stat(mdFileName.c_str(), &buffer) != 0)
 	{
-		
 		metaData.mPoints[0].x = margins;
 		metaData.mPoints[0].y = margins;
 		metaData.mPoints[1].x = sz.width - margins;
@@ -364,7 +328,7 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 		metaData.mCenter.x = round(metaData.mCenter.x*rat);
 		metaData.mCenter.y = round(metaData.mCenter.y*rat);
 	}
-	else
+	else//read target params from file
 	{
 		metaData.FromFile(mdFileName);
 		std::cout << "Target:" << endl;
@@ -503,14 +467,16 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 	
 	int x = 0, y = 0;
 	int xLastFrame = 0, yLastFrame = 0;
-	while (1)
+	while (cntFrameNum < numOfFiles)
 	{
 		Trace("****t01*****");
 		if (!isFromFile)
 		{
 			//shotsCand.resize(0);
 			// Capture frame-by-frame
-			cap >> frame;
+			frame = imread(fileList[cntFrameNum].c_str());
+			resize(frame, smallFrame, sz, 0, 0);
+
 			cntFrameNum++;
 			std::cout << cntFrameNum << endl;
 
@@ -541,10 +507,6 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 
 			if (isToCrop)
 				smallFrame = smallFrame(cropRct);
-			if (rot != 0)
-			{
-				transpose(smallFrame, smallFrame);
-			}
 
 			if (cntFrameNum == 0)
 				continue;
@@ -563,9 +525,8 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 		else
 		{
 			cntFrameNum = 764; 
-			std::stringstream buf;
-			buf << dirName << fName << "/" << cntFrameNum << ".bmp";
-			smallFrame = imread(buf.str());
+			frame = imread(fileList[cntFrameNum].c_str());
+			resize(frame, smallFrame, sz, 0, 0);	
 			cvtColor(smallFrame, smallFrame, COLOR_BGR2GRAY);
 		}
 		if (cntFrameNum < 100000000000766)
@@ -612,12 +573,12 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 		sprintf_s(buf, "FindShot: F=%d move x=%d y=%d.\n", cntFrameNum, x, y);
 		OutputDebugStringA(buf);
 
-		//if (isDebugMode )
+		if (isDebugMode )
 		{
 			cv::imshow("I", smallFrame);
 			cv::imshow("firstFrameSmooth", firstFrameSmooth);
 			cv::imshow("matAdptAfterClean", matAdpt);
-			cv::waitKey();
+			//cv::waitKey();
 		}
 			
 		Trace("****t05*****");
@@ -714,9 +675,6 @@ int FindShoots(const char* vidName, int selectedCh, HBITMAP imgBuffer,int imgHei
 	//cv::waitKey();
 	//cv::destroyAllWindows();
 	fout.close();
-	// When everything done, release the video capture object
-	cap.release();
-
 
 	return 0;
 }
