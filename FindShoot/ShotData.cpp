@@ -244,7 +244,7 @@ int LookForShots(Mat& histMat, Mat& timeMat, Mat& canMat, int thresholdInHist, v
 	Mat time, thrTime32, thrTime;
 	timeMat.convertTo(time, CV_32FC1);
 	//Find all pixels that were ON before frame 100
-	int timeToCleanBefore = 50;
+	int timeToCleanBefore = -1;
 	threshold(time, thrTime32, timeToCleanBefore, 255, THRESH_BINARY);
 	thrTime32.convertTo(thrTime, CV_8U);
 	cv::imshow("timeTime", thrTime);

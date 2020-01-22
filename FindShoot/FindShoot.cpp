@@ -701,3 +701,79 @@ int main()
 	imgBuffer = NULL;
 	return FindShoots(fullFileName.c_str(),1, imgBuffer, 1066, 800, 1);
 }
+
+FindShoot::FindShoot()
+{
+
+}
+
+FindShoot::FindShoot(String& fileNameFirst)
+{
+
+}
+
+void FindShoot::MarkTarget()
+{
+	ShootTargetMetaData metaData;
+	int desiredTargetWidth = 300;
+	int marginsTarget = 220;
+	int margins = 10;
+	Size sz = mFirstPic.size();
+
+	metaData.mPoints[0].x = margins;
+	metaData.mPoints[0].y = margins;
+	metaData.mPoints[1].x = sz.width - margins;
+	metaData.mPoints[1].y = margins;
+	metaData.mPoints[2].x = sz.width - margins;
+	metaData.mPoints[2].y = sz.height - margins;
+	metaData.mPoints[3].x = margins;
+	metaData.mPoints[3].y = sz.height - margins;
+
+	metaData.mCenter.x = sz.width >> 1;
+	metaData.mCenter.y = sz.height >> 1;
+
+	metaData.mOrgMat = mFirstPic;
+	metaData.mWindowName = "EnterPositions";
+	metaData.mRectColor = Scalar(25, 255, 0);
+	metaData.mCenterColor = Scalar(0, 0, 255);
+	float rat = desiredTargetWidth / (float)sz.width;
+	sz.width = round(sz.width*rat);
+	sz.height = round(sz.height*rat);
+	cv::resize(metaData.mOrgMat, metaData.mOrgMat, sz);
+
+	imshow("EnterPositions", metaData.mOrgMat);
+	cv::setMouseCallback("EnterPositions", MarkRectDrag_callback, &metaData);
+	int k = cv::waitKey();
+
+	cv::destroyAllWindows();
+	float targetWidth = AucDis((float)metaData.mPoints[0].x, (float)metaData.mPoints[0].y, (float)metaData.mPoints[1].x, (float)metaData.mPoints[1].y);
+	//Make sure that the width of the target is 300 pix
+	
+
+	for (int i = 0; i < 4; ++i)
+	{
+		metaData.mPoints[i].x = round(metaData.mPoints[i].x*rat);
+		metaData.mPoints[i].y = round(metaData.mPoints[i].y*rat);
+	}
+	metaData.mCenter.x = round(metaData.mCenter.x*rat);
+	metaData.mCenter.y = round(metaData.mCenter.y*rat);
+	//drawPolyRect(frame, metaData.mPoints, Scalar(255, 0, 17), 1);
+	//cv::imshow("TargetOnFrame", frame);
+	//cv::waitKey();
+	//metaData.ToFile(mdFileName);
+
+	targetWidth = AucDis((float)metaData.mPoints[0].x, (float)metaData.mPoints[0].y, (float)metaData.mPoints[1].x, (float)metaData.mPoints[1].y);
+	////Make sure that the width of the target is 300 pix
+	//rat = desiredTargetWidth / targetWidth;
+
+	//sz.width = round(largeSz.width*rat);
+	//sz.height = round(largeSz.height*rat);
+	////Return to work after saving
+	//for (int i = 0; i < 4; ++i)
+	//{
+	//	metaData.mPoints[i].x = round(metaData.mPoints[i].x*rat);
+	//	metaData.mPoints[i].y = round(metaData.mPoints[i].y*rat);
+	//}
+	//metaData.mCenter.x = round(metaData.mCenter.x*rat);
+	metaData.mCenter.y = round(metaData.mCenter.y*rat);
+}
